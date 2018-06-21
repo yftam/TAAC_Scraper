@@ -182,7 +182,7 @@ public class Scraper {
 		}*/
 	}
 
-	public void startScrapeLvl1_Amz(String url, DBConn dbConn) throws Exception {
+	public void startScrapeLvl1_Amz(String url) throws Exception {
 
 		final Document document = Jsoup.connect(url).get();		
 		Elements elements = document.select("div#zg_centerListWrapper");		
@@ -221,7 +221,7 @@ public class Scraper {
 				//=== Prime ===
 				String itemPrime = subelement1.select("div.a-row i").attr("aria-label");// Prime?
 
-				startScrapeLvl2_Amz(itemURL,dbConn);
+				startScrapeLvl2_Amz(itemURL);
 
 				//System.out.println(itemName+";"+itemRating+";"+itemPrice+";"+itemReviewTimes+";"+itemPrime+";"+itemID+";"+itemImgURL);
 
@@ -231,7 +231,7 @@ public class Scraper {
 		}
 	} // end startScrapeLvl1
 
-	public void startScrapeLvl2_Amz(String url, DBConn dbConn) throws Exception{
+	public void startScrapeLvl2_Amz(String url) throws Exception{
 
 		final Document document = Jsoup.connect(url).get();		
 		Elements elements = document.select("div#dp.home_improvement.en_CA");		
@@ -274,7 +274,7 @@ public class Scraper {
 	}
 */
 
-		public void startScrapeLvl2_FstTech_insert(String url, DBConn dbConn) throws Exception{
+		public void startScrapeLvl2_FstTech_insert(String url) throws Exception{
 
 			final Document document = Jsoup.connect(url).get();		// feed URL to start scrape
 
@@ -313,8 +313,6 @@ public class Scraper {
 
 				System.out.println(itemPrice+" | "+itemAvaliable+" | "+ itemFreeShipping +" | "+itemDescriptions);
 
-				String query = "";
-						dbConn.upsertDB(query);
 			}
 		}// end start Scrape Lvl2
 	}// end class
