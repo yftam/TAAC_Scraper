@@ -4,8 +4,5 @@
 *.prefs
 *.class
 *.dll
-.settings/org.eclipse.jdt.core.prefs
 *.csv
-*.class
-bin/Scraper.class
 bin/
