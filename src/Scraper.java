@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 //import java.sql.ResultSet;
 //import java.sql.Statement;
 import java.util.ArrayList;
@@ -20,11 +22,18 @@ public class Scraper {
 	private PrintWriter printwrite;
 	private int scrapCounter;
 	private Map<String, String> loginCookies;
+	int catagoryItemsScraped = 0;
 
 	public void createFile(String dirName, String fileName) throws IOException{
 		file = new File(dirName + "/" +fileName);
 		file.getParentFile().mkdirs();
 		file.createNewFile();			
+	}
+
+	public void createFile(String fileName) throws IOException{
+		file = new File(fileName);
+		file.createNewFile();		
+		printwrite = new PrintWriter(new FileOutputStream (new File(fileName),true));	
 	}
 
 	public void openFile(String fileName) throws IOException {
@@ -37,12 +46,17 @@ public class Scraper {
 	}
 
 	public void startCamelPopularProductsURL(String url, String category, Map<String, String> cookies) throws Exception {
-		int catagoryItemsScraped = 0;
+		DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm");
+		Date date = new Date();
+		String ts = dateFormat.format(date).replace(" ", "-").replaceAll("\\/|\\:", "");
+		createFile(ts+"-"+category+".csv");
+		
 		loginCookies = cookies;
 
 		final Document document = Jsoup.connect(url+category).cookies(loginCookies).get();
 		String categoryName = document.select("option[selected=\"selected\"]").text().replaceFirst("\\s(-|\\+)*\\d{2}:\\d{2}.{1,}", "");	//remove useless timezone string
 		System.out.println("***** CATEGORY "+categoryName+" *****");
+		printwrite.println("ASIN,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Stock,Seller,BestSeller,AmzChoice,IsAddOn,Rank");
 		
 		Elements elements = document.select("table.product_grid");
 
@@ -50,57 +64,79 @@ public class Scraper {
 			if(tr.attr("id").contains("upper")) {
 				for(Element td : tr.select("td")) {	//looping for each product(colomn) in a row
 					String productPageUrl = td.select("a").attr("href");// camel product page url
+					catagoryItemsScraped++;
 					startCamelProductPage(productPageUrl);
 					
-					catagoryItemsScraped++;
 //					Thread.sleep(500); // check for page load complete then continue to Level 2
 				}
 			}
 		}
 		System.out.println("Scraped "+catagoryItemsScraped+" items for "+categoryName+" category.");
+		printwrite.close();
+		if(document.select("div.pagination").select("a").text().contains("Next")) {
+			System.out.println("HAS NEXT PAGE");
+		}
 	}// end startCamelPopularProductsURL
 	
 	public void startCamelProductPage(String url) throws Exception{
 		final Document document = Jsoup.connect(url).cookies(loginCookies).get();		// feed URL to start scrape
 		String productString = document.select("h2#tracks").text();
-		String productTitle = productString.substring(0,productString.length()-13).replace("Create Amazon price watches for: ", "");
+		String productTitle = productString.substring(0,productString.length()-13).replace("Create Amazon price watches for: ", "").replace(",", "");
 		String asin = productString.substring(productString.length()-11,productString.length()-1);
 		Elements priceInfoRow = document.select("div#header_tracker").select("tbody");
 		String priceInfoAmazonRow = priceInfoRow.select("tr:nth-child(1)").select(":nth-child(9)").text();
-		String priceInfo3rdPtyRow = priceInfoRow.select("tr:nth-child(3)").select(":nth-child(9)").text();
+		String priceInfo3rdPtyRow = priceInfoRow.select("tr:nth-child(3)").select(":nth-child(9)").text().replace("+", "plus ");
+		String prime = "";
 		
-		System.out.println("CAMEL: "+asin+" | "+productTitle+" | Amazon-"+priceInfoAmazonRow+" | 3rd Party New-"+priceInfo3rdPtyRow);
-		if(!priceInfoAmazonRow.contains("Prime") && !priceInfo3rdPtyRow.contains("Prime")) {
+		if(priceInfoAmazonRow.contains("Prime") && priceInfo3rdPtyRow.contains("Prime")) {
+			prime = "Both";
+		} else if(priceInfoAmazonRow.contains("Prime")) {
+			prime = "Amazon";
+		} else if(priceInfo3rdPtyRow.contains("Prime")) {
+			prime = "3rdPty";
+		}
+		priceInfoAmazonRow.replace("rime","");
+		priceInfo3rdPtyRow.replace("rime","");
+		System.out.println("#"+catagoryItemsScraped+" CAMEL: "+asin+" | "+productTitle+" | Prime-"+prime+" | Amazon-"+priceInfoAmazonRow+" | 3rdPartyNew-"+priceInfo3rdPtyRow);
+		if(prime == "") {
 			System.out.println("-- No Prime, skipping. --");
 			return;
 		}
 		
-//		Document amazonPage = Jsoup.connect(document.select("div#retailer_link").select("a").attr("href")).get();
 		long startTime, endTime;
 		startTime = System.nanoTime();
 		
 		try {
 			Document amazonPage = Jsoup.connect("https://www.amazon.com/gp/product/"+asin).get();
-			Elements dpContainer = amazonPage.select("div#dp");
 	
 			//constant fields
-			String rating = amazonPage.select("div#averageCustomerReviews").select("span#acrPopover").attr("title").replace(" out of 5 stars", "");
-			String reviews = amazonPage.select("span[data-hook=\"total-review-count\"]").text();
-			String answeredQ = amazonPage.select("a#askATFLink > span").text().replace(" answered questions", "");
-			String price = amazonPage.select("span#priceblock_ourprice").text();
-			String availability = amazonPage.select("div#availability, span#availability").text();
+			String rating = amazonPage.select("div#averageCustomerReviews").select("span#acrPopover").attr("title").replace(" out of 5 stars", "").replace(",", "");
+			String reviews = amazonPage.select("span[data-hook=\"total-review-count\"]").text().replace(",", "");
+			String answeredQ = amazonPage.select("a#askATFLink > span").text().replace(" answered questions", "").replace(",", "");
+			String price = amazonPage.select("span#priceblock_ourprice, span#priceblock_dealprice").text();
+			String savings = amazonPage.select("tr#regularprice_savings > td.a-span12, tr#dealprice_savings > td.a-span12").text();
+			String savingsDollar = "", savingsPercentage = "";
+			if (savings.contains(" ")) {
+				String[] savingsSplit = savings.split(" ");
+				savingsDollar = savingsSplit[0];
+				savingsPercentage = savingsSplit[1].replaceAll("\\(|\\)", "");
+			}
+			String availability = amazonPage.select("div#availability, span#availability").text().replace(",", "");
 			String merchant = amazonPage.select("div#merchant-info, span#merchant-info").text().contains("sold by Amazon") ? "Amazon" : "FBA";
-			String rank = amazonPage.select("tr:contains(Best Sellers Rank)").text();
+			String rank = amazonPage.select("tr:contains(Best Sellers Rank)").text().replace(",", "");
 			
 			//special fields
 			String bestSellerCategory = amazonPage.select("div#centerCol").select("span#cat-name").text();
 			String amazonChoiceCategory = amazonPage.select("span.ac-keyword-link").text();
 			String coupon = amazonPage.select("div#unclippedCoupon").text().replace(" when you apply this coupon. Details", "");
-			String addon = amazonPage.select("div.a-box-group").select("span.a-text-bold").text();
+			String addon = amazonPage.select("div.a-box-group").select("span.a-text-bold").text().contains("Add-on") ? "Yes" : "No";
 			endTime = System.nanoTime();
-			
-			System.out.println(" -> AMZ: "+rating+" Rating | "+reviews+" Reviews | "+answeredQ+" answered Q | "+price+" | "+availability+" | "+merchant);
-			System.out.println(" -> AMZ: bestSellerCategory-"+bestSellerCategory+ " | AmzChoiceCategory-"+amazonChoiceCategory+" | Coupon-"+coupon+" | "+addon+ " | "+rank);
+
+//			printwrite.println("ASIN,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Stock,Seller,BestSeller,AmzChoice,AddOn,Rank");
+			printwrite.println(asin+","+productTitle+","+prime+","+priceInfoAmazonRow+","+priceInfo3rdPtyRow+","+rating+","+reviews+","+answeredQ+","+price+","+savingsDollar+","+
+					savingsPercentage+","+coupon+","+availability+","+merchant+","+bestSellerCategory+","+amazonChoiceCategory+","+addon+","+rank);
+			System.out.println(" -> AMZ: "+rating+" Rating | "+reviews+" Reviews | "+answeredQ+" answered Q | "+price+" | "+savingsDollar+" | "+savingsPercentage+" | Coupon-"+coupon+" | "+availability+" | "+merchant);
+			System.out.println(" -> AMZ: bestSellerCategory-"+bestSellerCategory+ " | AmzChoiceCategory-"+amazonChoiceCategory+" | "+addon+ " | "+rank);
 			System.out.println(" -> Time used to scrape AMZ page: "+(endTime-startTime)*0.000000001);
 		} catch (Exception ex) {
             System.out.println(ex.getMessage() + "\nAn exception occurred. Most likely 404");

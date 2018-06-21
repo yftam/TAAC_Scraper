@@ -1,7 +1,11 @@
 .classpath
 .project
 .settings\org.eclipse.jdt.core.prefs
-.classpath
 *.prefs
 *.class
 *.dll
+.settings/org.eclipse.jdt.core.prefs
+*.csv
+*.class
+bin/Scraper.class
+bin/
