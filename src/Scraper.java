@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 //import java.sql.ResultSet;
@@ -56,7 +58,7 @@ public class Scraper {
 		final Document document = Jsoup.connect(url+category).cookies(loginCookies).get();
 		String categoryName = document.select("option[selected=\"selected\"]").text().replaceFirst("\\s(-|\\+)*\\d{2}:\\d{2}.{1,}", "");	//remove useless timezone string
 		System.out.println("***** CATEGORY "+categoryName+" *****");
-		printwrite.println("ASIN,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Stock,Seller,BestSeller,AmzChoice,IsAddOn,Rank");
+		printwrite.println("ASIN,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,LowestPrice,IsLowest,$Within,AveragePrice,%Below,$Below,Stock,Seller,BestSeller,AmzChoice,IsAddOn,Rank");
 		
 		Elements elements = document.select("table.product_grid");
 
@@ -86,7 +88,16 @@ public class Scraper {
 		Elements priceInfoRow = document.select("div#header_tracker").select("tbody");
 		String priceInfoAmazonRow = priceInfoRow.select("tr:nth-child(1)").select(":nth-child(9)").text();
 		String priceInfo3rdPtyRow = priceInfoRow.select("tr:nth-child(3)").select(":nth-child(9)").text().replace("+", "plus ");
+		
 		String prime = "";
+		String lowestPriceAmazonStr = document.select("div#section_amazon").select("tr.lowest_price").select("td:contains($)").text().replace("$", "");
+		Double lowestPriceAmazon = lowestPriceAmazonStr.equals("") ? 0 : Double.parseDouble(lowestPriceAmazonStr);
+		String averagePriceAmazonStr = document.select("div#section_amazon").select("tbody").select("tr:contains(Average)").select("td:contains($)").text().replace("$", "");
+		Double averagePriceAmazon = averagePriceAmazonStr.equals("") ? 0 : Double.parseDouble(averagePriceAmazonStr);
+		String lowestPrice3rdPtyStr = document.select("div#section_new").select("tr.lowest_price").select("td:contains($)").text().replace("$", "");
+		Double lowestPrice3rdPty = lowestPrice3rdPtyStr.equals("") ? 0 : Double.parseDouble(lowestPrice3rdPtyStr);
+		String averagePrice3rdPtyStr = document.select("div#section_new").select("tbody").select("tr:contains(Average)").select("td:contains($)").text().replace("$", "");
+		Double averagePrice3rdPty = averagePrice3rdPtyStr.equals("") ? 0 : Double.parseDouble(averagePrice3rdPtyStr);
 		
 		if(priceInfoAmazonRow.contains("Prime") && priceInfo3rdPtyRow.contains("Prime")) {
 			prime = "Both";
@@ -97,7 +108,7 @@ public class Scraper {
 		}
 		priceInfoAmazonRow.replace("rime","");
 		priceInfo3rdPtyRow.replace("rime","");
-		System.out.println("#"+catagoryItemsScraped+" CAMEL: "+asin+" | "+productTitle+" | Prime-"+prime+" | Amazon-"+priceInfoAmazonRow+" | 3rdPartyNew-"+priceInfo3rdPtyRow);
+		System.out.println("#"+catagoryItemsScraped+" CAMEL: "+asin+" | "+productTitle+" | Prime-"+prime+" | Amazon-"+priceInfoAmazonRow+"+lowest $"+lowestPriceAmazon+"+avg $"+averagePriceAmazon+" | 3rdPartyNew-"+priceInfo3rdPtyRow+"+lowest $"+lowestPrice3rdPty+"+avg $"+averagePrice3rdPty);
 		if(prime == "") {
 			System.out.println("-- No Prime, skipping. --");
 			return;
@@ -113,73 +124,78 @@ public class Scraper {
 			String rating = amazonPage.select("div#averageCustomerReviews").select("span#acrPopover").attr("title").replace(" out of 5 stars", "").replace(",", "");
 			String reviews = amazonPage.select("span[data-hook=\"total-review-count\"]").text().replace(",", "");
 			String answeredQ = amazonPage.select("a#askATFLink > span").text().replace(" answered questions", "").replace(",", "");
-			String price = amazonPage.select("span#priceblock_ourprice, span#priceblock_dealprice").text();
+			String priceStr = amazonPage.select("span#priceblock_ourprice, span#priceblock_dealprice").text().replace("$", "");
+			Double price = priceStr.equals("") ? 0 : Double.parseDouble(priceStr);
 			String savings = amazonPage.select("tr#regularprice_savings > td.a-span12, tr#dealprice_savings > td.a-span12").text();
-			String savingsDollar = "", savingsPercentage = "";
+			Double savingsDollar = 0.0, savingsPercentage = 0.0;
 			if (savings.contains(" ")) {
 				String[] savingsSplit = savings.split(" ");
-				savingsDollar = savingsSplit[0];
-				savingsPercentage = savingsSplit[1].replaceAll("\\(|\\)", "");
+				savingsDollar = Double.parseDouble(savingsSplit[0].replace("$", ""));
+				savingsPercentage = Double.parseDouble(savingsSplit[1].replaceAll("\\(|\\)|\\%", ""));
 			}
 			String availability = amazonPage.select("div#availability, span#availability").text().replace(",", "");
-			String merchant = amazonPage.select("div#merchant-info, span#merchant-info").text().contains("sold by Amazon") ? "Amazon" : "FBA";
+			String merchantInfo = amazonPage.select("div#merchant-info, span#merchant-info").text();
+			String merchant = merchantInfo.contains("sold by Amazon") ? "Amazon" : merchantInfo.contains("Fulfilled by") ? "FBA" : "No Buybox";
 			String rank = amazonPage.select("tr:contains(Best Sellers Rank)").text().replace(",", "");
 			
 			//special fields
 			String bestSellerCategory = amazonPage.select("div#centerCol").select("span#cat-name").text();
 			String amazonChoiceCategory = amazonPage.select("span.ac-keyword-link").text();
-			String coupon = amazonPage.select("div#unclippedCoupon").text().replace(" when you apply this coupon. Details", "");
+			String coupon = amazonPage.select("div#unclippedCoupon, div#clippedCoupon").text().replaceAll("([=-z]|\\s|[ -#]|[&--]|\\/|\\.{2,}){1,}\\.{0,1}", "");
 			String addon = amazonPage.select("div.a-box-group").select("span.a-text-bold").text().contains("Add-on") ? "Yes" : "No";
+			
+			//calculate % within lowest/average price tracked on camelcamelcamel
+			String lowestStatus = "N/A", averageStatus = "N/A";
+			Double lowestPrice = 0.0, averagePrice = 0.0, dollarWithinLowest = 0.0, dollarBelowAverage = 0.0;
+			int withinLowestPercentage = 0, belowAveragePercentage = 0;
+			if(merchant == "Amazon") {
+				lowestPrice = lowestPriceAmazon;
+				averagePrice = averagePriceAmazon;
+			} else if(merchant == "FBA") {
+				lowestPrice = lowestPrice3rdPty;
+				averagePrice = averagePrice3rdPty;
+			}
+			if(price > 0) {
+				if(price <= lowestPrice) {
+					lowestStatus = "Yes";
+				} else {
+					dollarWithinLowest = round(price-lowestPrice, 2);
+					withinLowestPercentage = (int) (dollarWithinLowest/lowestPrice*100);
+					if(withinLowestPercentage <= 10) {	//within 10% of lowestPrice
+						lowestStatus = "W/in "+withinLowestPercentage+"%";
+					} else {
+						lowestStatus = "No - "+withinLowestPercentage+"%";
+						dollarWithinLowest = 0.0;
+					}
+				}
+				if(price > 0 && price <= averagePrice) {
+					dollarBelowAverage = round(averagePrice-price, 2);
+					belowAveragePercentage = (int) (dollarBelowAverage/averagePrice*100);
+					averageStatus = belowAveragePercentage+"% Below";
+				} else {
+					averageStatus = "No";
+				}
+			}
+			
 			endTime = System.nanoTime();
 
-//			printwrite.println("ASIN,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Stock,Seller,BestSeller,AmzChoice,AddOn,Rank");
-			printwrite.println(asin+","+productTitle+","+prime+","+priceInfoAmazonRow+","+priceInfo3rdPtyRow+","+rating+","+reviews+","+answeredQ+","+price+","+savingsDollar+","+
-					savingsPercentage+","+coupon+","+availability+","+merchant+","+bestSellerCategory+","+amazonChoiceCategory+","+addon+","+rank);
-			System.out.println(" -> AMZ: "+rating+" Rating | "+reviews+" Reviews | "+answeredQ+" answered Q | "+price+" | "+savingsDollar+" | "+savingsPercentage+" | Coupon-"+coupon+" | "+availability+" | "+merchant);
+//			"ASIN,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,LowestPrice,$Within,$Within%,AveragePrice,$Below,$Below%,Stock,Seller,BestSeller,AmzChoice,IsAddOn,Rank"
+			printwrite.println(asin+","+productTitle+","+prime+","+priceInfoAmazonRow+","+priceInfo3rdPtyRow+","+rating+","+reviews+","+answeredQ+",$"+price+",$"+savingsDollar+","+savingsPercentage+"%,"+coupon+
+					","+lowestPrice+","+lowestStatus+",$"+dollarWithinLowest+","+averagePrice+","+averageStatus+",$"+dollarBelowAverage+","+availability+","+merchant+","+bestSellerCategory+","+amazonChoiceCategory+","+addon+","+rank);
+			System.out.println(" -> AMZ: "+rating+" Rating | "+reviews+" Reviews | "+answeredQ+" answered Q | $"+price+" | $"+savingsDollar+" | "+savingsPercentage+"% | Coupon-"+coupon+" | LowestPrice-"+lowestPrice+"-%within"+lowestStatus+"-$within$"+dollarWithinLowest+" | BelowAverage-"+averagePrice+"-%below"+averageStatus+"-$below$"+dollarBelowAverage+" | "+availability+" | "+merchant);
 			System.out.println(" -> AMZ: bestSellerCategory-"+bestSellerCategory+ " | AmzChoiceCategory-"+amazonChoiceCategory+" | "+addon+ " | "+rank);
 			System.out.println(" -> Time used to scrape AMZ page: "+(endTime-startTime)*0.000000001);
 		} catch (Exception ex) {
             System.out.println(ex.getMessage() + "\nAn exception occurred. Most likely 404");
         }
-		
-		// item Descriptions?
-		/*String itemDescriptions = null;		
-		for(Element elements : document.select("div#ProductDetails")) {
-			itemDescriptions = elements.select("div.ProductDescriptions").text();
-		}
+	}
+	
+	public static double round(double value, int places) {
+	    if (places < 0) throw new IllegalArgumentException();
 
-		Elements elements = document.select("div.ProductBackdrop");		
-		for(Element element : elements.select("div.ProductOptionsBox")) {	
-
-			// item Price ?
-			String itemPrice = element.select("span#content_Price").text();
-
-			// item available ?
-			String itemAvaliable = element.select("input#AddToCart").attr("value").toString();
-			if(itemAvaliable.equals("")) {
-				itemAvaliable = "NOT AVALIABLE";
-			}else if(itemAvaliable.equals("ADD TO CART")) {
-				itemAvaliable = "AVALIABLE";
-			}
-
-			//Shipping free?
-			Boolean shippingFee_Bool = (element.select("div").text()).contains("ships free (worldwide)");
-			String itemFreeShipping = null;
-			if (shippingFee_Bool == true) {
-				itemFreeShipping = "Free Shipping";				
-			}else if(shippingFee_Bool == false) {
-				itemFreeShipping = "Shipping Fee";
-			}
-
-			//item descriptions
-			String itemDescrptions = element.select("div.ProductDescriptions").text();	
-
-
-			System.out.println(itemPrice+" | "+itemAvaliable+" | "+ itemFreeShipping +" | "+itemDescriptions);
-
-			String query = "";
-					dbConn.upsertDB(query);
-		}*/
+	    BigDecimal bd = new BigDecimal(value);
+	    bd = bd.setScale(places, RoundingMode.HALF_UP);
+	    return bd.doubleValue();
 	}
 
 	public void startScrapeLvl1_Amz(String url) throws Exception {
