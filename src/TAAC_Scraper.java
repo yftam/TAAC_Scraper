@@ -17,64 +17,51 @@ import org.jsoup.Connection;
 import org.jsoup.Connection.Method;
 public class TAAC_Scraper {
 	
-    private static Map<String, String> loginCookies;
-
-    private void login() {
-    }
+    private static int scrapeMode = 1;
 
 	public static void main(String[] args) throws Exception {
-		String camelPopularProductsURL = "https://camelcamelcamel.com/popular?deal=1&bn=";	//Show Deals Only
-		String[] camelAmzCategory = {"home-kitchen"};
-//		String[] camelAmzCategory = {"appliances","apps-for-android","arts-crafts-sewing","automotive","baby-products","beauty","books","cell-phones-accessories",
-//				"collectibles-fine-art","electronics","everything-else","grocery-gourmet-food","health-personal-care","home-kitchen",
-//				"industrial-scientific","movies-tv","mp3-downloads","music","musical-instruments","office-products","other","patio-lawn-garden",
-//				"pet-supplies","software","spine","sports-outdoors","tools-home-improvement","toys-games","video-games"};
-		String fileName;
-		Scraper scraper = new Scraper();
-		long startTime, endTime;
-		int scrapeCount;
-//		DBConn dbConn;
-//		dbConn = new DBConn();		
-//		dbConn.ConnectDB(); // connect to SQL DB
-		//========================================= Scraping================================================
-		try {			
-			//	fileName = "Scrape.txt";
-			//	scrapper.createFile("E:\\_GitHub\\Fantaspick", fileName);
-			scrapeCount =0;
-
-			//	while (true) {
-			startTime = System.nanoTime();
-			//scrapper.openFile(fileName);
-			
-	        try {
-	            Connection.Response res = Jsoup.connect("https://camelcamelcamel.com/sessions/create")
-	                    .data("login",       "fantaspick@gmail.com")
-	                    .data("password",       "happybirthday2018")
-	                    .method(Method.POST)
-	                    .execute();
-
-	            loginCookies = res.cookies();
-		        System.out.println(res.cookies());
-//		        Document document = Jsoup.connect("https://camelcamelcamel.com").cookies(loginCookies).get();
-//		        Elements dev = document.select("ul#top_right_menu_2014");
-//		        System.out.println(dev);
-	        } catch (MalformedURLException ex) {
-	            System.out.println("The URL specified was unable to be parsed or uses an invalid protocol. Please try again.");
-	            System.exit(1);
-	        } catch (Exception ex) {
-	            System.out.println(ex.getMessage() + "\nAn exception occurred.");
-	            System.exit(1);
-	        }
-			for (int i = 0; i < camelAmzCategory.length; i++) {
-				scraper.startCamelPopularProductsURL(camelPopularProductsURL, camelAmzCategory[i], loginCookies);
+		if(scrapeMode == 1) {
+		    Map<String, String> loginCookies = null;
+			String camelPopularProductsURL = "https://camelcamelcamel.com/popular?deal=1&bn=";	//Show Deals Only
+			String[] camelAmzCategory = {"arts-crafts-sewing"};
+//			String[] camelAmzCategory = {"appliances","apps-for-android","arts-crafts-sewing","automotive","baby-products","beauty","books","cell-phones-accessories",
+//					"collectibles-fine-art","electronics","everything-else","grocery-gourmet-food","health-personal-care","home-kitchen",
+//					"industrial-scientific","movies-tv","mp3-downloads","music","musical-instruments","office-products","other","patio-lawn-garden",
+//					"pet-supplies","software","spine","sports-outdoors","tools-home-improvement","toys-games","video-games"};
+			String fileName;
+			Scraper scraper = new Scraper();
+			long startTime, endTime;
+			int scrapeCount;
+	
+			try {
+				scrapeCount =0;
+				startTime = System.nanoTime();
+				
+		        try {
+		            Connection.Response res = Jsoup.connect("https://camelcamelcamel.com/sessions/create")
+		                    .data("login",       "fantaspick@gmail.com")
+		                    .data("password",       "happybirthday2018")
+		                    .method(Method.POST)
+		                    .execute();
+	
+		            loginCookies = res.cookies();
+			        System.out.println(res.cookies());
+		        } catch (MalformedURLException ex) {
+		            System.out.println("The URL specified was unable to be parsed or uses an invalid protocol. Please try again.");
+		            System.exit(1);
+		        } catch (Exception ex) {
+		            System.out.println(ex.getMessage() + "\nAn exception occurred.");
+		            System.exit(1);
+		        }
+				for (int i = 0; i < camelAmzCategory.length; i++) {
+					scraper.startCamelPopularProductsURL(camelPopularProductsURL, camelAmzCategory[i], loginCookies);
+				}
+				endTime = System.nanoTime();
+				System.out.println("========= "+new Date().toString()+" "+(endTime-startTime)*0.000000001+" "+ scrapeCount+++" =========");
+//				Thread.sleep(3000);		//1000 = 1 second
+			}catch (Exception e) {
+				e.printStackTrace();
 			}
-
-			//scrapper.closeFile();
-			endTime = System.nanoTime();
-			System.out.println("========= "+new Date().toString()+" "+(endTime-startTime)*0.000000001+" "+ scrapeCount+++" =========");
-//			Thread.sleep(3000);		//1000 = 1 second
-		}catch (Exception e) {
-			e.printStackTrace();
 		}
 	}//end main
 
