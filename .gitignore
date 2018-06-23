@@ -6,3 +6,4 @@
 *.dll
 *.csv
 bin/
+*.txt

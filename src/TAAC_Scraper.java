@@ -1,4 +1,6 @@
 import java.sql.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -20,73 +22,68 @@ public class TAAC_Scraper {
     private static int scrapeMode = 1;
 
 	public static void main(String[] args) throws Exception {
+		Scraper scraper = new Scraper();
+	    Map<String, String> camelLoginCookies = null;
+		DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+		String ts = dateFormat.format(new Date()).replace(" ", "-").replaceAll("\\/|\\:", "");
+		new File(ts).mkdir();
+	    if(scrapeMode == 1 || scrapeMode == 2) {
+	        try {
+	            Connection.Response res = Jsoup.connect("https://camelcamelcamel.com/sessions/create")
+	                    .data("login",       "fantaspick@gmail.com")
+	                    .data("password",       "happybirthday2018")
+	                    .method(Method.POST)
+	                    .execute();
+
+	            camelLoginCookies = res.cookies();
+		        System.out.println(res.cookies());
+	        } catch (MalformedURLException ex) {
+	            System.out.println("The URL specified was unable to be parsed or uses an invalid protocol. Please try again.");
+	            ex.printStackTrace();
+	            System.exit(1);
+	        } catch (Exception ex) {
+	            System.out.println(ex.getMessage() + "\nAn exception occurred.");
+				ex.printStackTrace();
+	            System.exit(1);
+	        }
+	    }
 		if(scrapeMode == 1) {
-		    Map<String, String> loginCookies = null;
-			String camelPopularProductsURL = "https://camelcamelcamel.com/popular?deal=1&bn=";	//Show Deals Only
-			String[] camelAmzCategory = {"arts-crafts-sewing"};
+			String camelPopularProductsURL = "https://camelcamelcamel.com/popular";	//Show Deals Only
+//			String[] camelAmzCategory = {"baby-products"};
 //			String[] camelAmzCategory = {"appliances","apps-for-android","arts-crafts-sewing","automotive","baby-products","beauty","books","cell-phones-accessories",
 //					"collectibles-fine-art","electronics","everything-else","grocery-gourmet-food","health-personal-care","home-kitchen",
 //					"industrial-scientific","movies-tv","mp3-downloads","music","musical-instruments","office-products","other","patio-lawn-garden",
 //					"pet-supplies","software","spine","sports-outdoors","tools-home-improvement","toys-games","video-games"};
-			String fileName;
-			Scraper scraper = new Scraper();
+			String[] camelAmzCategory = {"appliances","apps-for-android","arts-crafts-sewing","automotive","baby-products","beauty","books","cell-phones-accessories",
+					"collectibles-fine-art","electronics","everything-else","grocery-gourmet-food","health-personal-care","home-kitchen",
+					"industrial-scientific","movies-tv","mp3-downloads","music","musical-instruments","office-products","other","patio-lawn-garden",
+					"pet-supplies","software","spine","sports-outdoors","tools-home-improvement","toys-games","video-games"};
+			
 			long startTime, endTime;
-			int scrapeCount;
+			startTime = System.nanoTime();
 	
 			try {
-				scrapeCount =0;
-				startTime = System.nanoTime();
-				
-		        try {
-		            Connection.Response res = Jsoup.connect("https://camelcamelcamel.com/sessions/create")
-		                    .data("login",       "fantaspick@gmail.com")
-		                    .data("password",       "happybirthday2018")
-		                    .method(Method.POST)
-		                    .execute();
-	
-		            loginCookies = res.cookies();
-			        System.out.println(res.cookies());
-		        } catch (MalformedURLException ex) {
-		            System.out.println("The URL specified was unable to be parsed or uses an invalid protocol. Please try again.");
-		            System.exit(1);
-		        } catch (Exception ex) {
-		            System.out.println(ex.getMessage() + "\nAn exception occurred.");
-		            System.exit(1);
-		        }
 				for (int i = 0; i < camelAmzCategory.length; i++) {
-					scraper.startCamelPopularProductsURL(camelPopularProductsURL, camelAmzCategory[i], loginCookies);
+					scraper.createFile(ts+"/"+ts+"-"+camelAmzCategory[i]+".csv", ts+"/"+"error.txt");
+					scraper.startCamelPopularProductsURL(camelPopularProductsURL, "?deal=1&bn="+camelAmzCategory[i], camelLoginCookies);
+					scraper.closeFile();
 				}
 				endTime = System.nanoTime();
-				System.out.println("========= "+new Date().toString()+" "+(endTime-startTime)*0.000000001+" "+ scrapeCount+++" =========");
+				System.out.println("========= "+new Date().toString()+" "+(endTime-startTime)*0.000000001+" =========");
+				System.out.println("========= FINISHED =========");
 //				Thread.sleep(3000);		//1000 = 1 second
 			}catch (Exception e) {
+				System.err.println("FATAL ERROR");
 				e.printStackTrace();
 			}
+		} else if (scrapeMode == 2) {
+			String[] asin = {"0840774842","0470344016","0984504176","0802414354","B000BNG4VU","B00NRGID5S","B00O56ZOP6","B00I8YK4AQ","B01NA67U7U","B075L9KHW8","B01KLKCRTA","B07BHBTX6F"};
+			scraper.setLoginCookies(camelLoginCookies);
+			scraper.createFile(ts+"/"+ts+"-manualTest.csv", ts+"/"+"error.txt");
+			for (int i = 0; i < asin.length; i++) {
+				scraper.startCamelProductPage("https://camelcamelcamel.com/product/"+asin[i]);
+			}
+			scraper.closeFile();
 		}
 	}//end main
-
 }//end class
-
-
-
-
-
-/*		===Example===
- * final Document document = Jsoup.connect("http://www.imdb.com/chart/top").get(); // URL
-//System.out.println(document.outerHtml()); // html code of whole site	
-
-for(Element row : document.select("table.chart.full-width tr")) {			
-	final String title = row.select(".titleColumn").text();
-	final String rating = row.select(".imdbRating").text();			
-	System.out.println(title + " -> "+ rating);
-}
- */		
-
-//final Document document = Jsoup.connect("https://www.amazon.ca/gp/bestsellers/hi/ref=sv_hi_0").get();		
-//Elements elements = document.select("div#zg_centerListWrapper");
-//for(Element element : elements.select("div.zg_itemImmersion")) {	
-//	String itemInfo = element.select("div.zg_itemWrapper").text();
-//	System.out.println(itemInfo);
-//
-//
-//}
