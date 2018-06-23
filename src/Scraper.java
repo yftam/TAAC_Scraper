@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.Map;
+import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,7 +28,7 @@ public class Scraper {
 	private Map<String, String> loginCookies;
 	int totalItemsScraped = 0, totalItemsScrapedWithInfo = 0;
 	
-	private int maxItemToScrape = 10000;
+	private int maxItemToScrape = 100000;
 
 	public void createFile(String fileName, String errorFileName) throws IOException{
 		file = new File(fileName);
@@ -79,40 +80,59 @@ public class Scraper {
 		}
 	}// end startCamelPopularProductsURL
 	
+	public int randomBetween(int low, int high) {
+		Random r = new Random();
+		int result = r.nextInt(high-low) + low;
+		return result;
+	}
+	
 	public void startCamelProductPage(String url) throws Exception{
-		Thread.sleep(1500);	//setDelay
+		int delay = randomBetween(1500, 2000);	//setDelay
+		System.out.println("Delaying "+delay+ "ms.");
+		Thread.sleep(delay);
 		totalItemsScraped++;
-		final Document document = Jsoup.connect(url).cookies(loginCookies).get();		// feed URL to start scrape
-		String productString = document.select("h2#tracks").text();
-		String productTitle = productString.substring(0,productString.length()-13).replace("Create Amazon price watches for: ", "").replace(",", "");
-		String asin = productString.substring(productString.length()-11,productString.length()-1);
-		Elements priceInfoRow = document.select("div#header_tracker").select("tbody");
-		String priceInfoAmazonRow = priceInfoRow.select("tr:nth-child(1)").select(":nth-child(9)").text();
-		String priceInfo3rdPtyRow = priceInfoRow.select("tr:nth-child(3)").select(":nth-child(9)").text().replace("+", "plus ");
-		
-		String prime = "";
-		String lowestPriceAmazonStr = document.select("div#section_amazon").select("tr.lowest_price").select("td:contains($)").text().replaceAll("\\$|\\,", "");
-		Double lowestPriceAmazon = lowestPriceAmazonStr.equals("") ? 0 : Double.parseDouble(lowestPriceAmazonStr);
-		String averagePriceAmazonStr = document.select("div#section_amazon").select("tbody").select("tr:contains(Average)").select("td:contains($)").text().replaceAll("\\$|\\,", "");
-		Double averagePriceAmazon = averagePriceAmazonStr.equals("") ? 0 : Double.parseDouble(averagePriceAmazonStr);
-		String lowestPrice3rdPtyStr = document.select("div#section_new").select("tr.lowest_price").select("td:contains($)").text().replaceAll("\\$|\\,", "");
-		Double lowestPrice3rdPty = lowestPrice3rdPtyStr.equals("") ? 0 : Double.parseDouble(lowestPrice3rdPtyStr);
-		String averagePrice3rdPtyStr = document.select("div#section_new").select("tbody").select("tr:contains(Average)").select("td:contains($)").text().replaceAll("\\$|\\,", "");
-		Double averagePrice3rdPty = averagePrice3rdPtyStr.equals("") ? 0 : Double.parseDouble(averagePrice3rdPtyStr);
-		
-		if(priceInfoAmazonRow.contains("Prime") && priceInfo3rdPtyRow.contains("Prime")) {
-			prime = "Both";
-		} else if(priceInfoAmazonRow.contains("Prime")) {
-			prime = "Amazon";
-		} else if(priceInfo3rdPtyRow.contains("Prime")) {
-			prime = "3rdPty";
-		}
-		priceInfoAmazonRow = priceInfoAmazonRow.replace("Prime ","");
-		priceInfo3rdPtyRow = priceInfo3rdPtyRow.replaceAll("Prime\\s{0,1}","");
-		System.out.println("#"+totalItemsScraped+" CAMEL: "+asin+" | "+productTitle+" | Prime-"+prime+" | Amazon-"+priceInfoAmazonRow+"+lowest $"+lowestPriceAmazon+"+avg $"+averagePriceAmazon+" | 3rdPartyNew-"+priceInfo3rdPtyRow+"+lowest $"+lowestPrice3rdPty+"+avg $"+averagePrice3rdPty);
-		if(prime == "") {
-			System.out.println("-- No Prime, skipping. --");
-			return;
+		String productTitle = "", asin = "", priceInfoAmazonRow = "", priceInfo3rdPtyRow = "", prime = "";
+		Double lowestPriceAmazon = 0.0, averagePriceAmazon = 0.0, lowestPrice3rdPty = 0.0, averagePrice3rdPty = 0.0;
+		try {
+			final Document document = Jsoup.connect(url).cookies(loginCookies).get();		// feed URL to start scrape
+			String productString = document.select("h2#tracks").text();
+			productTitle = productString.substring(0,productString.length()-13).replace("Create Amazon price watches for: ", "").replace(",", "");
+			asin = productString.substring(productString.length()-11,productString.length()-1);
+			Elements priceInfoRow = document.select("div#header_tracker").select("tbody");
+			priceInfoAmazonRow = priceInfoRow.select("tr:nth-child(1)").select(":nth-child(9)").text();
+			priceInfo3rdPtyRow = priceInfoRow.select("tr:nth-child(3)").select(":nth-child(9)").text().replace("+", "plus ");
+			
+			prime = "";
+			String lowestPriceAmazonStr = document.select("div#section_amazon").select("tr.lowest_price").select("td:contains($)").text().replaceAll("\\$|\\,", "");
+			lowestPriceAmazon = lowestPriceAmazonStr.equals("") ? 0 : Double.parseDouble(lowestPriceAmazonStr);
+			String averagePriceAmazonStr = document.select("div#section_amazon").select("tbody").select("tr:contains(Average)").select("td:contains($)").text().replaceAll("\\$|\\,", "");
+			averagePriceAmazon = averagePriceAmazonStr.equals("") ? 0 : Double.parseDouble(averagePriceAmazonStr);
+			String lowestPrice3rdPtyStr = document.select("div#section_new").select("tr.lowest_price").select("td:contains($)").text().replaceAll("\\$|\\,", "");
+			lowestPrice3rdPty = lowestPrice3rdPtyStr.equals("") ? 0 : Double.parseDouble(lowestPrice3rdPtyStr);
+			String averagePrice3rdPtyStr = document.select("div#section_new").select("tbody").select("tr:contains(Average)").select("td:contains($)").text().replaceAll("\\$|\\,", "");
+			averagePrice3rdPty = averagePrice3rdPtyStr.equals("") ? 0 : Double.parseDouble(averagePrice3rdPtyStr);
+			
+			if(priceInfoAmazonRow.contains("Prime") && priceInfo3rdPtyRow.contains("Prime")) {
+				prime = "Both";
+			} else if(priceInfoAmazonRow.contains("Prime")) {
+				prime = "Amazon";
+			} else if(priceInfo3rdPtyRow.contains("Prime")) {
+				prime = "3rdPty";
+			}
+			priceInfoAmazonRow = priceInfoAmazonRow.replace("Prime ","");
+			priceInfo3rdPtyRow = priceInfo3rdPtyRow.replaceAll("Prime\\s{0,1}","");
+			System.out.println("#"+totalItemsScraped+" CAMEL: "+asin+" | "+productTitle+" | Prime-"+prime+" | Amazon-"+priceInfoAmazonRow+"+lowest $"+lowestPriceAmazon+"+avg $"+averagePriceAmazon+" | 3rdPartyNew-"+priceInfo3rdPtyRow+"+lowest $"+lowestPrice3rdPty+"+avg $"+averagePrice3rdPty);
+			if(prime == "") {
+				System.out.println("-- No Prime, skipping. --");
+				return;
+			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			System.err.println("========= Camelcamelcamel HTTP Page Error, "+new Date().toString()+" =========");
+			System.err.println("========= BLOCKED BY CAMELCAMELCAMEL, EXITING =========");
+			closeFile();
+            System.exit(1);
 		}
 		
 		long startTime, endTime;
@@ -227,13 +247,21 @@ public class Scraper {
 			System.out.println(" -> AMZ: bestSellerCategory-"+bestSellerCategory+ " | AmzChoiceCategory-"+amazonChoiceCategory+" | "+addon+ " | "+printRank(rankArr));
 			System.out.println(" -> Time used to scrape AMZ page: "+(endTime-startTime)*0.000000001);
 			totalItemsScrapedWithInfo++;
-		} catch (Exception ex) {
-            System.out.println(ex.getMessage() + "\nAn exception occurred.");
-            ex.printStackTrace(System.err);
+		} catch (Exception e) {
+            System.out.println(e.getMessage() + "\nAn exception occurred.");
+            e.printStackTrace(System.err);
             errorpw.println(new Date());
             errorpw.println("https://www.amazon.com/gp/product/"+asin);
-        	ex.printStackTrace(errorpw);
+        	e.printStackTrace(errorpw);
         	errorpw.close();
+        	
+        	String eToString = e.toString();
+        	if(eToString.contains("Status=503")) {
+    			System.err.println("========= Amazon HTTP Error statis 503, "+new Date().toString()+" =========");
+				System.err.println("========= BLOCKED BY AMAZON, EXITING =========");
+    			closeFile();
+                System.exit(1);
+        	}
         }
 	}
 	
