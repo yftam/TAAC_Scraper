@@ -87,7 +87,7 @@ public class Scraper {
 	}
 	
 	public void startCamelProductPage(String url) throws Exception{
-		int delay = randomBetween(1500, 2000);	//setDelay
+		int delay = randomBetween(3000, 4000);	//setDelay
 		System.out.println("Delaying "+delay+ "ms.");
 		Thread.sleep(delay);
 		totalItemsScraped++;
@@ -173,8 +173,7 @@ public class Scraper {
 			if(rank.equals("")) {
 				rank = amazonPage.select("tr:contains(Best Sellers Rank)").text().replace(",", "");
 			}
-			String newRank = rank.replaceAll("(Amazon ){0,}Best Sellers Rank\\:{0,} \\#|\\s(\\(.{1,}\\))", "");
-			String[] rankArr = newRank.split(" #");
+			String[] rankArr = rank.replaceAll("(Amazon ){0,}Best Sellers Rank\\:{0,} \\#|\\s(\\(.{1,}\\))", "").split(" #");
 			Collections.sort(Arrays.asList(rankArr), new Comparator<String>() {
 			    public int compare(String o1, String o2) {
 			        return extractInt(o1) - extractInt(o2);
@@ -186,7 +185,7 @@ public class Scraper {
 			});
 			
 			//special fields
-			String bestSellerCategory = amazonPage.select("div#centerCol").select("span#cat-name").text();
+			String bestSellerCategory = amazonPage.select("div#centerCol").select("span.cat-link").text();
 			String amazonChoiceCategory = amazonPage.select("span.ac-keyword-link").text();
 			String promo = "";
 			try { promo = amazonPage.select("div#unclippedCoupon, div#clippedCoupon, div#applicablePromotionList_feature_div, div#applicable_promotion_list_sec").first().text().replace(",", "");
@@ -289,7 +288,7 @@ public class Scraper {
 		return returnStr;
 	}
 	
-	public static double round(double value, int places) {
+	public double round(double value, int places) {
 	    if (places < 0) throw new IllegalArgumentException();
 
 	    BigDecimal bd = new BigDecimal(value);
