@@ -52,11 +52,14 @@ public class TAAC_Scraper {
 //			String[] camelAmzCategory = {"baby-products"};
 			String[] camelAmzCategory = {
 //					"appliances","apps-for-android","arts-crafts-sewing","automotive","baby-products","beauty",
-					"books","cell-phones-accessories",
+//					"books",
+//					"cell-phones-accessories",
 //					"collectibles-fine-art",
-					"electronics","everything-else","grocery-gourmet-food","health-personal-care","home-kitchen",
-					"industrial-scientific","movies-tv","mp3-downloads","music","musical-instruments","office-products","other","patio-lawn-garden",
-					"pet-supplies","software","spine","sports-outdoors","tools-home-improvement","toys-games","video-games"};
+					"electronics",
+//					"everything-else","grocery-gourmet-food","health-personal-care","home-kitchen",
+//					"industrial-scientific","movies-tv","mp3-downloads","music","musical-instruments","office-products","other","patio-lawn-garden",
+//					"pet-supplies","software","spine","sports-outdoors","tools-home-improvement","toys-games","video-games"
+					};
 //			String[] camelAmzCategory = {"toys-games","video-games"};
 			
 			long startTime, endTime;
