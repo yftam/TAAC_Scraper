@@ -34,8 +34,7 @@ public class Scraper {
 		file = new File(fileName);
 		file.createNewFile();
 		printwrite = new PrintWriter(new FileOutputStream (new File(fileName),true));
-		printwrite.println("Link,ASIN,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,LowestPrice,IsLowest,$Within,AveragePrice,%Below,$Below,Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank");
-        errorpw = new PrintWriter(new FileOutputStream (new File(errorFileName),true));
+		errorpw = new PrintWriter(new FileOutputStream (new File(errorFileName),true));
 	}
 
 	public void closeFile() throws IOException {
@@ -48,7 +47,8 @@ public class Scraper {
 
 	public void startCamelPopularProductsURL(String url, String categoryUrl, Map<String, String> cookies) throws Exception {
 		loginCookies = cookies;
-
+		printwrite.println("Link,ASIN,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,LowestPrice,IsLowest,$Within,AveragePrice,%Below,$Below,Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank");
+        
 		final Document document = Jsoup.connect(url+categoryUrl).cookies(loginCookies).get();
 		String categoryName = document.select("option[selected=\"selected\"]").text().replaceFirst("\\s(-|\\+)*\\d{2}:\\d{2}.{1,}", "");	//remove useless timezone string
 		System.out.println("***** CATEGORY "+categoryName+" *****");
@@ -80,19 +80,16 @@ public class Scraper {
 		}
 	}// end startCamelPopularProductsURL
 	
-	public int randomBetween(int low, int high) {
+	public void delayBetween(int low, int high) throws InterruptedException {
 		Random r = new Random();
-		int result = r.nextInt(high-low) + low;
-		return result;
-	}
-	
-	public void startCamelProductPage(String url) throws Exception{
-		int delay = randomBetween(500, 1000);	//setDelay
+		int delay = r.nextInt(high-low) + low;
 		System.out.println("Delaying "+delay+ "ms.");
 		Thread.sleep(delay);
-//		totalItemsScraped++;
-//		String productTitle = "", asin = "", priceInfoAmazonRow = "", priceInfo3rdPtyRow = "", prime = "";
-//		Double lowestPriceAmazon = 0.0, averagePriceAmazon = 0.0, lowestPrice3rdPty = 0.0, averagePrice3rdPty = 0.0;
+	}
+	
+	public void startCamelProductPage(String url) throws Exception {
+		delayBetween(500, 1000);	//setDelay
+
 		Camel camel = new Camel(url, loginCookies);
 		try {
 			camel.scrapeCamelPage();
@@ -142,6 +139,50 @@ public class Scraper {
                 System.exit(1);
         	}
         }
+	}
+	
+	public void startAmazonBestSellersList(String url, int level) throws Exception {
+		try {
+			Document amazonBestSellersPage = Jsoup.connect(url).get();
+			Element list;
+			if(level == 1) {
+				list = amazonBestSellersPage.select("ul#zg_browseRoot > ul").first();
+			} else {
+				list = amazonBestSellersPage.select("ul:has(span.zg_selected)").last().select("ul:has(a)").last();
+			}
+
+			String check = list.select("span.zg_selected").text();
+			String spaces = "", commas = "";
+			for(int i = 1; i < level; i++) {
+				spaces = spaces + " ";
+				commas = commas + ",";
+			}
+			if(check.equals("")) {
+				for(Element li : list.select("li")) {	//looping for each row
+					String category = li.text();
+					String categoryUrl = li.select("a").attr("href");
+					System.out.println(spaces+"Level: "+level+" Category: "+category+" - URL: "+categoryUrl);
+					printwrite.println(level+commas+","+category+","+categoryUrl);
+//				closeFile();
+//					delayBetween(1000,2000);
+//				if(level < 3)
+						startAmazonBestSellersList(categoryUrl, level+1);
+				}
+			} else {
+				System.out.println(spaces+"    NO MORE SUB CATEGORY UNDER "+check);
+			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+            errorpw.println(new Date());
+            errorpw.println(url);
+        	e.printStackTrace(errorpw);
+        	errorpw.close();
+		}
+	}
+	
+	public void startAmazonTodaysDeals(String url) {
+		
 	}
 	
 	private String skipZero(int toCheck) {

@@ -61,7 +61,7 @@ public class Amazon extends ScrapeUtil {
 		amazonPage = Jsoup.connect("https://www.amazon.com/gp/product/"+asin).get();
 
 		//constant fields
-		productTitle = amazonPage.select("span#productTitle").text();
+		productTitle = amazonPage.select("span#productTitle").text().replace(",", "");;
 		rating = amazonPage.select("div#averageCustomerReviews").select("span#acrPopover").attr("title").replace(" out of 5 stars", "");
 		try { reviews = amazonPage.select("span#acrCustomerReviewText, span[data-hook=\"total-review-count\"]").first().text().replaceAll("[^\\d]", "");
 		} catch (NullPointerException ne) { reviews = "0"; }
