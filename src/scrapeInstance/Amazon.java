@@ -44,7 +44,7 @@ public class Amazon extends ScrapeUtil {
 		this.setMarketplace(marketplace);
 		if(urlOrAsin.contains("amazon") || urlOrAsin.contains("/")) {	//passing in url
 			url = urlOrAsin;
-			asin = findMatch(urlOrAsin, "(\\/([0-9]{10}|B([A-Z]|[0-9]){9})\\/)|Asin\\=B([A-Z]|[0-9]){9}").replace("Asin=", "");
+			asin = findMatch(urlOrAsin, "(\\/([0-9]{10}|B([A-Z]|[0-9]){9})\\/)|Asin\\=B([A-Z]|[0-9]){9}").replace("Asin=", "").replace("/", "");
 		} else {	//passing in ASIN
 			asin = urlOrAsin;
 			if(marketplace == "US") {
@@ -70,6 +70,9 @@ public class Amazon extends ScrapeUtil {
 		if(priceStr.equals("")) {	//most likely in the case of scraping Books
 			priceStr = amazonPage.select("span[class=\"a-size-medium a-color-price offer-price a-text-normal\"], span[class=\"a-size-medium a-color-price header-price\"]").text().replaceAll("\\$|\\,", "");
 		}
+		if(url.contains("_videogames_")) {
+			priceStr = priceStr.trim().replace(" ", ".");
+		}
 		price = priceStr.equals("") ? 0 : Double.parseDouble(priceStr);
 		String savings = amazonPage.select("tr#regularprice_savings > td.a-span12, tr#dealprice_savings > td.a-span12").text();
 		if(savings.equals("")) {	//most likely in the case of scraping Books
@@ -81,8 +84,8 @@ public class Amazon extends ScrapeUtil {
 			savingsPercentage = Integer.parseInt(savingsSplit[1].replaceAll("\\(|\\)|\\%", ""));
 		}
 		availability = amazonPage.select("div#availability, span#availability, span#pantry-availability").text().replace(",", "");
-		String merchantInfo = amazonPage.select("div#merchant-info, span#merchant-info, div#pantry-availability-brief").text();
-		merchant = merchantInfo.contains("Amazon Pantry") || amazonPage.select("div#pantryStoreMessage_feature_div").text().contains("Prime Pantry") ? "PrimePantry" : merchantInfo.contains("sold by Amazon") ? "Amazon" : merchantInfo.contains("Fulfilled by") ? "FBA" : "No Prime Buybox";
+		String merchantInfo = amazonPage.select("div#merchant-info, span#merchant-info, div#pantry-availability-brief, div#digital-toggle-buybox").text().toLowerCase();
+		merchant = merchantInfo.contains("Amazon Pantry") || amazonPage.select("div#pantryStoreMessage_feature_div").text().contains("prime pantry") ? "PrimePantry" : merchantInfo.contains("sold by amazon") ? "Amazon" : merchantInfo.contains("fulfilled by") ? "FBA" : "No Prime Buybox";
 		primeExclusive = merchantInfo.contains("exclusively") || amazonPage.select("div#pantryPrimeExclusiveMessage_feature_div").text().toLowerCase().contains("exclusively") ? "Yes" : "No";
 		
 		rank = amazonPage.select("li:contains(Amazon Best Sellers Rank)").text().replace(",", "");
@@ -101,11 +104,14 @@ public class Amazon extends ScrapeUtil {
 		});
 		
 		//special fields
-		bestSellerCategory = amazonPage.select("div#centerCol").select("span.cat-link").text();
+		bestSellerCategory = amazonPage.select("div.badge-wrapper").select("span.cat-link").text().replaceAll("^in\\s|,", "");
+		if(bestSellerCategory.equals("")) {
+			bestSellerCategory = amazonPage.select("div.badge-wrapper").select("span.cat-name").text().replaceAll("^in\\s|,", "");
+		}
 		amazonChoiceCategory = amazonPage.select("span.ac-keyword-link").text();
 		try { promo = amazonPage.select("div#unclippedCoupon, div#clippedCoupon, div#applicablePromotionList_feature_div, div#applicable_promotion_list_sec").first().text().replace(",", "");
 		} catch (NullPointerException ne) { }
-//		String coupon = promo.replaceAll("([=-z]|\\s|[ -#]|[&--]|\\/|\\.{2,}){1,}\\.{0,1}", "");
+		coupon = promo.replaceAll("([=-z]|\\s|[ -#]|[&--]|\\/|\\.{2,}){1,}\\.{0,1}", "");
 		if(!promo.equals("")) {
 			findMatch(promo, "(\\$\\d+(\\.\\d+)?|\\d+\\%)");
 		}
@@ -145,15 +151,15 @@ public class Amazon extends ScrapeUtil {
 				}
 			}
 		}
-
-//			"ASIN,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,LowestPrice,$Within,$Within%,AveragePrice,$Below,$Below%,Stock,Seller,BestSeller,AmzChoice,IsAddOn,Rank"
-//			printwrite.println("https://www.amazon.com/gp/product/"+asin+","+asin+","+productTitle+","+prime+","+priceInfoAmazonRow+","+priceInfo3rdPtyRow+","+rating+","+reviews+","+answeredQ+
-//					",$"+price+","+skipZero(savingsDollar)+","+skipZero(savingsPercentage)+","+coupon+","+promo+","+skipZero(lowestPrice)+","+lowestStatus+","+skipZero(dollarWithinLowest)+","+skipZero(averagePrice)+","+averageStatus+","+skipZero(dollarBelowAverage)+
-//					","+availability+","+merchant+","+primeExclusive+","+bestSellerCategory+","+amazonChoiceCategory+","+addon+","+printRank(rankList));
-//			System.out.println(" -> AMZ: "+rating+" Rating | "+reviews+" Reviews | "+answeredQ+" answered Q | $"+price+" | $"+savingsDollar+" | "+savingsPercentage+"% | Coupon-"+coupon+promo+" | LowestPrice-"+lowestPrice+"-%within"+lowestStatus+"-$within$"+dollarWithinLowest+" | BelowAverage-"+averagePrice+"-%below"+averageStatus+"-$below$"+dollarBelowAverage+" | "+availability+" | "+merchant);
-//			System.out.println(" -> AMZ: bestSellerCategory-"+bestSellerCategory+ " | AmzChoiceCategory-"+amazonChoiceCategory+" | "+addon+ " | "+printRank(rankList));
-//			System.out.println(" -> Time used to scrape AMZ page: "+(endTime-startTime)*0.000000001);
 		totalItemsScrapedWithInfo++;
+		
+		if(productTitle.equals("")) {
+			if(amazonPage.select("p").text().contains("robot")) {
+				System.err.println("========= BLOCKED BY AMAZON, EXITING =========");
+//    			closeFile();
+                System.exit(1);
+			}
+		}
 	}
 	
 	public String getMarketplace() {
