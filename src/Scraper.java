@@ -125,7 +125,7 @@ public class Scraper {
 			endTime = System.nanoTime();
 
 //			"ASIN,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,LowestPrice,$Within,$Within%,AveragePrice,$Below,$Below%,Stock,Seller,BestSeller,AmzChoice,IsAddOn,Rank"
-			printwrite.println(amz.getUrl()+","+amz.getAsin()+","+amz.getProductTitle()+","+camel.getPrime()+","+camel.getPriceInfoAmazonRow()+","+camel.getPriceInfo3rdPtyRow()+","+amz.getRating()+","+amz.getReviews()+","+amz.getAnsweredQ()+
+			printwrite.println(amz.getUrl()+","+amz.getAsin()+","+new Date().toString()+","+amz.getProductTitle()+","+camel.getPrime()+","+camel.getPriceInfoAmazonRow()+","+camel.getPriceInfo3rdPtyRow()+","+amz.getRating()+","+amz.getReviews()+","+amz.getAnsweredQ()+
 					",$"+amz.getPrice()+","+skipZero(amz.getSavingsDollar())+","+skipZero(amz.getSavingsPercentage())+","+amz.getCoupon()+","+amz.getPromo()+","+skipZero(amz.getLowestPrice())+","+amz.getLowestStatus()+","+skipZero(amz.getDollarWithinLowest())+","+skipZero(amz.getAveragePrice())+","+amz.getAverageStatus()+","+skipZero(amz.getDollarBelowAverage())+
 					","+amz.getAvailability()+","+amz.getMerchant()+","+amz.getPrimeExclusive()+","+amz.getBestSellerCategory()+","+amz.getAmazonChoiceCategory()+","+amz.getAddon()+","+printRank(amz.getRankList()));
 			System.out.println(" -> AMZ: "+amz.getRating()+" Rating | "+amz.getReviews()+" Reviews | "+amz.getAnsweredQ()+" answered Q | $"+amz.getPrice()+" | $"+amz.getSavingsDollar()+" | "+amz.getSavingsPercentage()+"% | Coupon-"+amz.getCoupon()+amz.getPromo()+" | LowestPrice-"+amz.getLowestPrice()+"-%within"+amz.getLowestStatus()+"-$within$"+amz.getDollarWithinLowest()+" | BelowAverage-"+amz.getAveragePrice()+"-%below"+amz.getAverageStatus()+"-$below$"+amz.getDollarBelowAverage()+" | "+amz.getAvailability()+" | "+amz.getMerchant());
@@ -213,8 +213,8 @@ public class Scraper {
 				endTime = System.nanoTime();
 
 //					"ASIN,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,LowestPrice,$Within,$Within%,AveragePrice,$Below,$Below%,Stock,Seller,BestSeller,AmzChoice,IsAddOn,Rank"
-				printwrite.println(amz.getUrl()+","+amz.getAsin()+","+amz.getProductTitle()+","+amz.getRating()+","+amz.getReviews()+","+amz.getAnsweredQ()+
-						",$"+amz.getPrice()+","+skipZero(amz.getSavingsDollar())+","+skipZero(amz.getSavingsPercentage())+","+amz.getCoupon()+","+amz.getPromo()+
+				printwrite.println(amz.getUrl()+","+amz.getAsin()+","+new Date().toString()+","+amz.getProductTitle()+","+amz.getRating()+","+amz.getReviews()+","+amz.getAnsweredQ()+
+						","+amz.getPrice()+","+skipZero(amz.getSavingsDollar())+","+skipZero(amz.getSavingsPercentage())+","+amz.getCoupon()+","+amz.getPromo()+
 //							","+skipZero(amz.getLowestPrice())+","+amz.getLowestStatus()+","+skipZero(amz.getDollarWithinLowest())+","+skipZero(amz.getAveragePrice())+","+amz.getAverageStatus()+","+skipZero(amz.getDollarBelowAverage())+
 						","+amz.getAvailability()+","+amz.getMerchant()+","+amz.getPrimeExclusive()+","+amz.getBestSellerCategory()+","+amz.getAmazonChoiceCategory()+","+amz.getAddon()+","+printRank(amz.getRankList()));
 				System.out.println(" -> AMZ: "+amz.getAsin()+" | "+amz.getProductTitle());
@@ -240,7 +240,7 @@ public class Scraper {
 	                System.exit(1);
 	        	}
 	        }
-			delayBetween(2000,3000);
+			delayBetween(1000,2000);
 			count++;
 		}
 	}
@@ -282,7 +282,7 @@ public class Scraper {
 		if(toCheck == 0) {
 			return " ";
 		} else {
-			return toCheck+"%";
+			return toCheck+"";
 		}
 	}
 	
@@ -290,7 +290,7 @@ public class Scraper {
 		if(toCheck == 0.0) {
 			return " ";
 		} else {
-			return "$"+toCheck;
+			return ""+toCheck;
 		}
 	}
 	

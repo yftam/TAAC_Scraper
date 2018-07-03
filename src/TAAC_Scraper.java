@@ -80,7 +80,7 @@ public class TAAC_Scraper {
 			try {
 				for (int i = 0; i < camelAmzCategory.length; i++) {
 					scraper.createFile("scrape_results/"+ts+"/"+ts+"-"+camelAmzCategory[i]+".csv", "scrape_results/"+ts+"/"+"error.txt");
-					scraper.filePrintln("Link,ASIN,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,LowestPrice,IsLowest,$Within,AveragePrice,%Below,$Below,Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank");
+					scraper.filePrintln("Link,ASIN,TimeScraped,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,LowestPrice,IsLowest,$Within,AveragePrice,%Below,$Below,Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank");
 					scraper.startCamelPopularProductsURL(camelPopularProductsURL, "?deal=1&bn="+camelAmzCategory[i], camelLoginCookies);
 					scraper.closeFile();
 				}
@@ -99,7 +99,7 @@ public class TAAC_Scraper {
 //			String[] asin = {"0840774842","0470344016","0984504176","0802414354","B000BNG4VU","B00NRGID5S","B00O56ZOP6","B00I8YK4AQ","B01NA67U7U","B075L9KHW8","B01KLKCRTA","B07BHBTX6F"};
 			scraper.setLoginCookies(camelLoginCookies);
 			scraper.createFile("scrape_results/"+ts+"/"+ts+"-manualTest.csv", "scrape_results/"+ts+"/"+"error.txt");
-			scraper.filePrintln("Link,ASIN,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,LowestPrice,IsLowest,$Within,AveragePrice,%Below,$Below,Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank");
+			scraper.filePrintln("Link,ASIN,TimeScraped,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,LowestPrice,IsLowest,$Within,AveragePrice,%Below,$Below,Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank");
 			for (int i = 0; i < asin.length; i++) {
 				scraper.startCamelProductPage("https://camelcamelcamel.com/product/"+asin[i]);
 			}
@@ -133,7 +133,7 @@ public class TAAC_Scraper {
 					}
 					String ts2 = df.format(new Date()).replace(" ", "-").replaceAll("\\/|\\:", "");
 					scraper.createFile(outputDir+"/"+ts2+"-"+category+".csv", outputDir+"/"+"error.txt");
-					scraper.filePrintln("Link,ASIN,Product,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,"
+					scraper.filePrintln("Link,ASIN,TimeScraped,Product,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,"
 //							+ "LowestPrice,IsLowest,$Within,AveragePrice,%Below,$Below,"
 							+ "Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank");
 					scraper.startAmazonBestSellersTopProducts(url);
@@ -145,6 +145,9 @@ public class TAAC_Scraper {
 				}
 			}
 			sc.close();
+			String dirToCombine = ts+"-level-"+Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL;
+			String resultsDir = "scrape_results/amazon_best_sellers/"+dirToCombine;
+			scraper.startCombiningAmazonBestSellersTopProductResults(resultsDir);
 		} else if (Settings.SCRAPE_MODE == 5) {	//manually scrape top products in a specified Amazon Best Sellers sub-category
 			String outputDir = "scrape_results/amazon_best_sellers/manualTest";
 			new File(outputDir).mkdirs();
@@ -154,7 +157,7 @@ public class TAAC_Scraper {
 			String url = "https://www.amazon.com/Best-Sellers-Computers-Accessories/zgbs/pc/ref=zg_bs_nav_0/135-4139201-6915306";
 
 			scraper.createFile(outputDir+"/"+ts2+".csv", outputDir+"/"+"error.txt");
-			scraper.filePrintln("Link,ASIN,Product,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,"
+			scraper.filePrintln("Link,ASIN,TimeScraped,Product,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,"
 //							+ "LowestPrice,IsLowest,$Within,AveragePrice,%Below,$Below,"
 					+ "Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank");
 			scraper.startAmazonBestSellersTopProducts(url);
