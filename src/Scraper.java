@@ -107,7 +107,7 @@ public class Scraper {
 				System.out.println("-- No Prime, skipping. --");
 				return;
 			}
-		} catch (Exception e) {
+		} catch (Exception e) { //test
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			System.err.println("========= Camelcamelcamel HTTP Page Error, "+new Date().toString()+" =========");
