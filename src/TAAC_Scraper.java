@@ -56,7 +56,7 @@ public class TAAC_Scraper {
 		DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 		String ts = dateFormat.format(new Date()).replace(" ", "-").replaceAll("\\/|\\:", "");
 
-		if(Settings.SCRAPE_MODE == 1) {
+		if(Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_CAMEL_POPULAR_ITEMS) {
 		    Map<String, String> camelLoginCookies = connectCamel();
 			new File("scrape_results/"+ts).mkdirs();
 			String camelPopularProductsURL = "https://camelcamelcamel.com/popular";	//Show Deals Only
@@ -92,7 +92,7 @@ public class TAAC_Scraper {
 				System.err.println("FATAL ERROR");
 				e.printStackTrace();
 			}
-		} else if (Settings.SCRAPE_MODE == 2) {	//manual scrape
+		} else if (Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_CAMEL_MANUAL_LIST) {	//manual scrape
 		    Map<String, String> camelLoginCookies = connectCamel();
 			new File("scrape_results/"+ts).mkdirs();
 			String[] asin = {"B00005O6B7","B01MZGTG96","B000TFHN56","B003TXSAHU","B0055B2RGO","B00IJ0ALYS","B076S9YBMH","B06XDW4ZXL","B00JE5FGH4","B00DF6YAIE","B01HM4Z8AI","B01MU6ZAPG","B007KNTGPU","B01HV8ZA62"};
@@ -104,7 +104,7 @@ public class TAAC_Scraper {
 				scraper.startCamelProductPage("https://camelcamelcamel.com/product/"+asin[i]);
 			}
 			scraper.closeFile();
-		} else if (Settings.SCRAPE_MODE == 3) {	//scrape to get list of Amazon Best Sellers Categories
+		} else if (Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_GET_LIST_OF_BEST_SELLERS_CATEGORIES) {	//scrape to get list of Amazon Best Sellers Categories
 			String url = Urls.AMAZON_US_BEST_SELLER_ROOT;	//by default use Amazon US url
 			if (Settings.AMAZON_MARKETPLACE == "CA") {
 				url = Urls.AMAZON_CA_BEST_SELLER_ROOT;
@@ -114,7 +114,7 @@ public class TAAC_Scraper {
 			scraper.startAmazonBestSellersList(url, 1);
 //			scraper.startAmazonBestSellersList("https://www.amazon.com/Best-Sellers/zgbs/amazon-devices/ref=zg_bs_nav_0", 2);
 			scraper.closeFile();
-		} else if (Settings.SCRAPE_MODE == 4) {	//using links from scrape_mode 3 to scrape top products in Amazon Best Sellers sub-categories
+		} else if (Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_SCRAPE_TOP_PRODUCTS_IN_BEST_SELLERS_CATEGORIES) {	//using links from scrape_mode 3 to scrape top products in Amazon Best Sellers sub-categories
 			File file = new File("scrape_results/amazon_best_sellers/categories_list_3_levels_"+Settings.AMAZON_MARKETPLACE+".csv");
 			String outputDir = "scrape_results/amazon_best_sellers/"+ts+"-level-"+Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL;
 			new File(outputDir).mkdirs();
@@ -148,7 +148,7 @@ public class TAAC_Scraper {
 			String dirToCombine = ts+"-level-"+Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL;
 			String resultsDir = "scrape_results/amazon_best_sellers/"+dirToCombine;
 			scraper.startCombiningAmazonBestSellersTopProductResults(resultsDir);
-		} else if (Settings.SCRAPE_MODE == 5) {	//manually scrape top products in a specified Amazon Best Sellers sub-category
+		} else if (Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_SCRAPE_TOP_PRODUCTS_IN_SPECIFIED_BEST_SELLERS_CATEGORY) {	//manually scrape top products in a specified Amazon Best Sellers sub-category
 			String outputDir = "scrape_results/amazon_best_sellers/manualTest";
 			new File(outputDir).mkdirs();
 			DateFormat df = new SimpleDateFormat("HH:mm");
@@ -166,12 +166,12 @@ public class TAAC_Scraper {
 			System.out.println("======================== FINISHED CATEGORY MANUAL SCRAPE ========================");
 			System.out.println("=================================================================================");
 			System.out.println();
-		} else if (Settings.SCRAPE_MODE == 6) {	//manually combining all Amazon Best Sellers sub-category scraped products into a single csv file
-			String dirToCombine = "20180701-123957-level-1";
+		} else if (Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_COMBINE_TOP_PRODUCTS_RESULTS) {	//manually combining all Amazon Best Sellers sub-category scraped products into a single csv file
+			String dirToCombine = "20180704-095221-level-1";
 			String resultsDir = "scrape_results/amazon_best_sellers/"+dirToCombine;
 
 			scraper.startCombiningAmazonBestSellersTopProductResults(resultsDir);
-		} else if (Settings.SCRAPE_MODE == 7) {	//scrape Amazon Today's Deals -> Deal of the Day filter
+		} else if (Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_SCRAPE_TODAYS_DEALS_DEAL_OF_THE_DAY) {	//scrape Amazon Today's Deals -> Deal of the Day filter
 			String url = Urls.AMAZON_US_TODAYS_DEALS_DEAL_OF_THE_DAY;	//by default use Amazon US url
 			if (Settings.AMAZON_MARKETPLACE == "CA") {
 				url = Urls.AMAZON_CA_TODAYS_DEALS_DEAL_OF_THE_DAY;
