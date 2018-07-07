@@ -107,7 +107,7 @@ public class Scraper {
 				System.out.println("-- No Prime, skipping. --");
 				return;
 			}
-		} catch (Exception e) { //test
+		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			System.err.println("========= Camelcamelcamel HTTP Page Error, "+new Date().toString()+" =========");
@@ -256,7 +256,7 @@ public class Scraper {
 	    File combinedResultFile = new File(resultsFolder+"/COMBINED_RESULTS.csv");
 	    combinedResultFile.createNewFile();
 		printwrite = new PrintWriter(new FileOutputStream (combinedResultFile,true));
-		printwrite.println("Category,Link,ASIN,Product,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,"
+		printwrite.println("Category,Link,ASIN,Time,Product,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,"
 //				+ "LowestPrice,IsLowest,$Within,AveragePrice,%Below,$Below,"
 				+ "Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank");
 		
