@@ -55,7 +55,7 @@ public class TAAC_Scraper {
 		Scraper scraper = new Scraper();
 		DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 		String ts = dateFormat.format(new Date()).replace(" ", "-").replaceAll("\\/|\\:", "");
-		String scrape_dest = LocalOutputDest.scrape_dest;
+		String scrape_dest = LocalOutputDest.SCRAPE_DEST;
 
 		if(Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_CAMEL_POPULAR_ITEMS) {
 		    Map<String, String> camelLoginCookies = connectCamel();
