@@ -55,10 +55,11 @@ public class TAAC_Scraper {
 		Scraper scraper = new Scraper();
 		DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 		String ts = dateFormat.format(new Date()).replace(" ", "-").replaceAll("\\/|\\:", "");
+		String scrape_dest = LocalOutputDest.scrape_dest;
 
 		if(Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_CAMEL_POPULAR_ITEMS) {
 		    Map<String, String> camelLoginCookies = connectCamel();
-			new File("scrape_results/"+ts).mkdirs();
+			new File(scrape_dest+"/"+ts).mkdirs();
 			String camelPopularProductsURL = "https://camelcamelcamel.com/popular";	//Show Deals Only
 //			String[] camelAmzCategory = {"baby-products"};
 			String[] camelAmzCategory = {
@@ -79,7 +80,7 @@ public class TAAC_Scraper {
 	
 			try {
 				for (int i = 0; i < camelAmzCategory.length; i++) {
-					scraper.createFile("scrape_results/"+ts+"/"+ts+"-"+camelAmzCategory[i]+".csv", "scrape_results/"+ts+"/"+"error.txt");
+					scraper.createFile(scrape_dest+"/"+ts+"/"+ts+"-"+camelAmzCategory[i]+".csv", scrape_dest+"/"+ts+"/"+"error.txt");
 					scraper.filePrintln("Link,ASIN,TimeScraped,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,LowestPrice,IsLowest,$Within,AveragePrice,%Below,$Below,Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank");
 					scraper.startCamelPopularProductsURL(camelPopularProductsURL, "?deal=1&bn="+camelAmzCategory[i], camelLoginCookies);
 					scraper.closeFile();
@@ -94,11 +95,11 @@ public class TAAC_Scraper {
 			}
 		} else if (Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_CAMEL_MANUAL_LIST) {	//manual scrape
 		    Map<String, String> camelLoginCookies = connectCamel();
-			new File("scrape_results/"+ts).mkdirs();
+			new File(scrape_dest+"/"+ts).mkdirs();
 			String[] asin = {"B00005O6B7","B01MZGTG96","B000TFHN56","B003TXSAHU","B0055B2RGO","B00IJ0ALYS","B076S9YBMH","B06XDW4ZXL","B00JE5FGH4","B00DF6YAIE","B01HM4Z8AI","B01MU6ZAPG","B007KNTGPU","B01HV8ZA62"};
 //			String[] asin = {"0840774842","0470344016","0984504176","0802414354","B000BNG4VU","B00NRGID5S","B00O56ZOP6","B00I8YK4AQ","B01NA67U7U","B075L9KHW8","B01KLKCRTA","B07BHBTX6F"};
 			scraper.setLoginCookies(camelLoginCookies);
-			scraper.createFile("scrape_results/"+ts+"/"+ts+"-manualTest.csv", "scrape_results/"+ts+"/"+"error.txt");
+			scraper.createFile(scrape_dest+"/"+ts+"/"+ts+"-manualTest.csv", scrape_dest+"/"+ts+"/"+"error.txt");
 			scraper.filePrintln("Link,ASIN,TimeScraped,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,LowestPrice,IsLowest,$Within,AveragePrice,%Below,$Below,Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank");
 			for (int i = 0; i < asin.length; i++) {
 				scraper.startCamelProductPage("https://camelcamelcamel.com/product/"+asin[i]);
@@ -109,14 +110,14 @@ public class TAAC_Scraper {
 			if (Settings.AMAZON_MARKETPLACE == "CA") {
 				url = Urls.AMAZON_CA_BEST_SELLER_ROOT;
 			}
-			new File("scrape_results/amazon_best_sellers").mkdirs();
-			scraper.createFile("scrape_results/amazon_best_sellers/"+ts+"-categories_list.csv", "scrape_results/amazon_best_sellers/error.txt");
+			new File(scrape_dest+"/amazon_best_sellers").mkdirs();
+			scraper.createFile(scrape_dest+"/amazon_best_sellers/"+ts+"-categories_list.csv", scrape_dest+"/amazon_best_sellers/error.txt");
 			scraper.startAmazonBestSellersList(url, 1);
 //			scraper.startAmazonBestSellersList("https://www.amazon.com/Best-Sellers/zgbs/amazon-devices/ref=zg_bs_nav_0", 2);
 			scraper.closeFile();
 		} else if (Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_SCRAPE_TOP_PRODUCTS_IN_BEST_SELLERS_CATEGORIES) {	//using links from scrape_mode 3 to scrape top products in Amazon Best Sellers sub-categories
-			File file = new File("scrape_results/amazon_best_sellers/categories_list_3_levels_"+Settings.AMAZON_MARKETPLACE+".csv");
-			String outputDir = "scrape_results/amazon_best_sellers/"+ts+"-level-"+Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL;
+			File file = new File(scrape_dest+"/amazon_best_sellers/categories_list_3_levels_"+Settings.AMAZON_MARKETPLACE+".csv");
+			String outputDir = scrape_dest+"/amazon_best_sellers/"+ts+"-level-"+Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL;
 			new File(outputDir).mkdirs();
 			DateFormat df = new SimpleDateFormat("HH:mm");
 			
@@ -146,10 +147,10 @@ public class TAAC_Scraper {
 			}
 			sc.close();
 			String dirToCombine = ts+"-level-"+Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL;
-			String resultsDir = "scrape_results/amazon_best_sellers/"+dirToCombine;
+			String resultsDir = scrape_dest+"/amazon_best_sellers/"+dirToCombine;
 			scraper.startCombiningAmazonBestSellersTopProductResults(resultsDir);
 		} else if (Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_SCRAPE_TOP_PRODUCTS_IN_SPECIFIED_BEST_SELLERS_CATEGORY) {	//manually scrape top products in a specified Amazon Best Sellers sub-category
-			String outputDir = "scrape_results/amazon_best_sellers/manualTest";
+			String outputDir = scrape_dest+"/amazon_best_sellers/manualTest";
 			new File(outputDir).mkdirs();
 			DateFormat df = new SimpleDateFormat("HH:mm");
 			String ts2 = df.format(new Date()).replace(" ", "-").replaceAll("\\/|\\:", "");
@@ -168,7 +169,7 @@ public class TAAC_Scraper {
 			System.out.println();
 		} else if (Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_COMBINE_TOP_PRODUCTS_RESULTS) {	//manually combining all Amazon Best Sellers sub-category scraped products into a single csv file
 			String dirToCombine = "20180704-095221-level-1";
-			String resultsDir = "scrape_results/amazon_best_sellers/"+dirToCombine;
+			String resultsDir = scrape_dest+"/amazon_best_sellers/"+dirToCombine;
 
 			scraper.startCombiningAmazonBestSellersTopProductResults(resultsDir);
 		} else if (Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_SCRAPE_TODAYS_DEALS_DEAL_OF_THE_DAY) {	//scrape Amazon Today's Deals -> Deal of the Day filter
