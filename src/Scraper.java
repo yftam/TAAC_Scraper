@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -33,7 +34,8 @@ public class Scraper {
 	private PrintWriter printwrite, errorpw;
 	private Map<String, String> loginCookies;
 	int totalItemsScraped = 0, totalItemsScrapedWithInfo = 0;
-	
+	private Connect2DB connect;
+
 	private int maxItemToScrape = 9999;
 
 	public void createFile(String fileName, String errorFileName) throws IOException{
@@ -41,6 +43,10 @@ public class Scraper {
 		file.createNewFile();
 		printwrite = new PrintWriter(new FileOutputStream (new File(fileName),true));
 		errorpw = new PrintWriter(new FileOutputStream (new File(errorFileName),true));
+		    System.out.println("CONNECTION TO DATABASE STARTED ... ");
+	        connect = new Connect2DB();
+	        connect.newConnection();
+	        System.out.println("CONNECTION TO DATABASE SUCESSFUL ... ");
 	}
 	
 	public void filePrintln(String print) {
@@ -124,10 +130,19 @@ public class Scraper {
 			amz.scrapeAmazonPage();
 			endTime = System.nanoTime();
 
+			// add2DB
+			add2DB_Camel(camel, amz);
+
+
+			
+
+			
+			
 //			"ASIN,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,LowestPrice,$Within,$Within%,AveragePrice,$Below,$Below%,Stock,Seller,BestSeller,AmzChoice,IsAddOn,Rank"
 			printwrite.println(amz.getUrl()+","+amz.getAsin()+","+new Date().toString()+","+amz.getProductTitle()+","+camel.getPrime()+","+camel.getPriceInfoAmazonRow()+","+camel.getPriceInfo3rdPtyRow()+","+amz.getRating()+","+amz.getReviews()+","+amz.getAnsweredQ()+
 					",$"+amz.getPrice()+","+skipZero(amz.getSavingsDollar())+","+skipZero(amz.getSavingsPercentage())+","+amz.getCoupon()+","+amz.getPromo()+","+skipZero(amz.getLowestPrice())+","+amz.getLowestStatus()+","+skipZero(amz.getDollarWithinLowest())+","+skipZero(amz.getAveragePrice())+","+amz.getAverageStatus()+","+skipZero(amz.getDollarBelowAverage())+
 					","+amz.getAvailability()+","+amz.getMerchant()+","+amz.getPrimeExclusive()+","+amz.getBestSellerCategory()+","+amz.getAmazonChoiceCategory()+","+amz.getAddon()+","+printRank(amz.getRankList()));
+		
 			System.out.println(" -> AMZ: "+amz.getRating()+" Rating | "+amz.getReviews()+" Reviews | "+amz.getAnsweredQ()+" answered Q | $"+amz.getPrice()+" | $"+amz.getSavingsDollar()+" | "+amz.getSavingsPercentage()+"% | Coupon-"+amz.getCoupon()+amz.getPromo()+" | LowestPrice-"+amz.getLowestPrice()+"-%within"+amz.getLowestStatus()+"-$within$"+amz.getDollarWithinLowest()+" | BelowAverage-"+amz.getAveragePrice()+"-%below"+amz.getAverageStatus()+"-$below$"+amz.getDollarBelowAverage()+" | "+amz.getAvailability()+" | "+amz.getMerchant());
 			System.out.println(" -> AMZ: bestSellerCategory-"+amz.getBestSellerCategory()+ " | AmzChoiceCategory-"+amz.getAmazonChoiceCategory()+" | "+amz.getAddon()+ " | "+printRank(amz.getRankList()));
 			System.out.println(" -> Time used to scrape AMZ page: "+(endTime-startTime)*0.000000001);
@@ -426,4 +441,118 @@ public class Scraper {
 
 		}
 	}// end start Scrape Lvl2
+
+
+	public void add2DB_Camel(Camel camel, Amazon amz) throws SQLException {
+		
+        if ( 
+		connect.querySelect("SELECT  "
+                + "ASIN "
+                + "FROM CamelResults "
+                + "WHERE "
+                + "ASIN = " + "'"+ amz.getAsin() + "'" ) == true) {
+
+              	
+       		        
+		connect.queryInsert("INSERT INTO CamelResults ("
+                + "[Link], "
+                + "[ASIN], "
+                + "[Date_java], "
+                + "[Product], "
+                + "[Prime], "
+                + "[AmazonSt], "
+                + "[3rdPtySt], "
+                + "[Rating], "
+                + "[Reviews], "
+                + "[AnsweredQ], "
+                + "[PriceNow], "
+                + "[Save], "
+                + "[Save%], "
+                + "[Coupon], "
+                + "[Promo], "
+                + "[LowestPrice], "
+                + "[IsLowest], "
+                + "[$Within], "
+                + "[AveragePrice], "
+                + "[%BelowAverageStatus], "
+                + "[$Below], "
+                + "[Stock], "
+                + "[Merchant], "
+                + "[PrimeExclusive], "
+                + "[BestSeller], "
+                + "[AmzChoice], "
+                + "[IsAddOn], "
+                + "[Rank] )"
+                + "VALUES ("
+                + "'" +amz.getUrl() + "',"
+                + "'" +amz.getAsin() + "',"
+                + "'" +new Date().toString() + "',"
+                + "'" +amz.getProductTitle().replace("'", "''") +"',"
+                + "'" +camel.getPrime() + "',"
+                + "'" +camel.getPriceInfoAmazonRow() + "',"
+                + "'" +camel.getPriceInfo3rdPtyRow()+ "',"
+                + "'" +amz.getRating() + "',"
+                + "'" +amz.getReviews() + "',"
+                + "'" +amz.getAnsweredQ()+ "',"
+                + amz.getPrice()+ ","
+                + amz.getSavingsDollar()+ ","
+                + "'" +amz.getSavingsPercentage()+ "',"
+                + "'" +amz.getCoupon()+ "',"
+                + "'" +amz.getPromo() + "',"
+                + amz.getLowestPrice() + ","
+                + "'" +amz.getLowestStatus()+ "',"
+                + amz.getDollarWithinLowest()+ ","
+                + amz.getAveragePrice() + ","
+                + "'" + amz.getAverageStatus()+ "',"
+                + amz.getDollarBelowAverage() + ","
+                + "'" +amz.getAvailability().replace("'", "''") + "',"
+                + "'" +amz.getMerchant() + "',"
+                + "'" +amz.getPrimeExclusive() + "',"
+                + "'" +amz.getBestSellerCategory().replace("'", "''")+ "',"
+                + "'" +amz.getAmazonChoiceCategory().replace("'", "''")+ "',"         
+                + "'" +amz.getAddon()+ "',"
+                + "'" +printRank(amz.getRankList()).replace("'", "''") + "')");
+		
+		
+        } else {
+        	
+        	System.out.println ("ITEM EXISTS ... SKIP INSERT...");
+//        	
+//			connect.queryInsert("UPDATE CamelResults ("
+//					+ "SET "
+//                    + "[Link] = " + amz.getUrl() + ", "
+//                    + "[Date_java] = " + new Date().toString() + ", "
+//                    + "[Product] =  " + amz.getProductTitle() + ", "
+//                    + "[Prime] =  "  + camel.getPrime() + ", "
+//                    + "[AmazonSt] =  " + camel.getPriceInfoAmazonRow() + ", "
+//                    + "[3rdPtySt]=  "  + camel.getPriceInfo3rdPtyRow() + ", "
+//                    + "[Rating]=   "  + amz.getRating() + ", "
+//                    + "[Reviews]=   " + amz.getReviews() + ", "
+//                    + "[AnsweredQ]=   " + amz.getAnsweredQ() + ", "
+//                    + "[PriceNow]=   "  + amz.getPrice() + ", "
+//                    + "[Save]=   " + amz.getSavingsDollar() + ", "
+//                    + "[Save%]=   " + amz.getSavingsPercentage() + ", "
+//                    + "[Coupon]=   "  + amz.getCoupon() + ", "
+//                    + "[Promo]=   "  + amz.getPromo() + ", "
+//                    + "[LowestPrice]=   " + amz.getLowestPrice() + ", "
+//                    + "[IsLowest]=   "  + amz.getLowestStatus() + ", "
+//                    + "[$Within]=   " + amz.getDollarWithinLowest() + ", "
+//                    + "[AveragePrice%]=   " + amz.getAveragePrice() + ", "
+//                    + "[%BelowAverageStatus]=   "  + amz.getAverageStatus() + ", "
+//                    + "[$Below]=   " + amz.getDollarBelowAverage() + ", "
+//                    + "[Stock]=   " + amz.getAvailability() + ", "
+//                    + "[Merchant]=   " + amz.getMerchant() + ", "
+//                    + "[PrimeExclusive]=   " + amz.getPrimeExclusive() + ", "
+//                    + "[BestSeller]=   " + amz.getBestSellerCategory() + ", "
+//                    + "[AmzChoice]=   " + amz.getAmazonChoiceCategory() + ", "
+//                    + "[IsAddOn]=   " + amz.getAddon() + ", "
+//                    + "[Rank]=   )" + printRank(amz.getRankList()) + " "
+//                    + "WHERE  "
+//                    + "[ASIN] = " + amz.getAsin() );
+//                    
+//
+        }
+	}
+
+
 }// end class

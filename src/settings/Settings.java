@@ -1,7 +1,7 @@
 package settings;
 
 public class Settings {
-	public static int SCRAPE_MODE = 4;
+	public static int SCRAPE_MODE = 1;
 	public static String AMAZON_MARKETPLACE = "US";
 	
 	public static int SCRAPE_MODE_CAMEL_POPULAR_ITEMS = 1;
