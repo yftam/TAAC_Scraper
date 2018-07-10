@@ -43,10 +43,13 @@ public class Scraper {
 		file.createNewFile();
 		printwrite = new PrintWriter(new FileOutputStream (new File(fileName),true));
 		errorpw = new PrintWriter(new FileOutputStream (new File(errorFileName),true));
-		    System.out.println("CONNECTION TO DATABASE STARTED ... ");
-	        connect = new Connect2DB();
-	        connect.newConnection();
-	        System.out.println("CONNECTION TO DATABASE SUCESSFUL ... ");
+	}
+	
+	public void connectDB() {
+	    System.out.println("CONNECTION TO DATABASE STARTED ... ");
+        connect = new Connect2DB();
+        connect.newConnection();
+        System.out.println("CONNECTION TO DATABASE SUCESSFUL ... ");
 	}
 	
 	public void filePrintln(String print) {
@@ -269,6 +272,7 @@ public class Scraper {
 	        }
 	    };
 	    File combinedResultFile = new File(resultsFolder+"/COMBINED_RESULTS.csv");
+	    combinedResultFile.delete();
 	    combinedResultFile.createNewFile();
 		printwrite = new PrintWriter(new FileOutputStream (combinedResultFile,true));
 		printwrite.println("Category,Link,ASIN,Time,Product,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,"
@@ -324,124 +328,25 @@ public class Scraper {
 	    bd = bd.setScale(places, RoundingMode.HALF_UP);
 	    return bd.doubleValue();
 	}
-
-	public void startScrapeLvl1_Amz(String url) throws Exception {
-
-		final Document document = Jsoup.connect(url).get();		
-		Elements elements = document.select("div#zg_centerListWrapper");		
-		for(Element element : elements.select("div.zg_itemImmersion")) {				
-			for(Element subelement1 : element.select("div.zg_itemWrapper")) {
-
-				//=== Item Picture URL ===
-				String itemImgURL = subelement1.select("div.a-section img").attr("src");// imageURL
-
-				//=== Item Name ===
-				String itemNameRaw = subelement1.select("a.a-link-normal div").text();// item name
-				String itemName = itemNameRaw.replace("'", "''"); // remove ' so wont be confused with query
-
-				//=== Item ID ===
-				String[] itemIdNameParse = (subelement1.select("div.a-section a.a-link-normal").attr("href")).split("/");// itemID Aand Name to be prased by '/'
-				String itemID = itemIdNameParse[3]; // item ID
-
-				//=== Item URL for more description ===
-				String itemURL = "https://amazon.ca"+ subelement1.select("div.a-section a.a-link-normal").attr("href");
-
-				//=== Item Rating ===
-				String itemRating = subelement1.select("div.a-icon-row a").attr("title");// rating		
-
-				//=== Price ===
-				String[] itemPriceParse = (subelement1.select("span.p13n-sc-price").text()).split(" ");// price
-				Double itemPrice;
-				if (itemPriceParse.length <= 1) { // check if the Price is blank. i.e. item not unavailable				
-					itemPrice= 999999999999.00;	// if item unavailable set set price
-				}else {
-					itemPrice = Double.parseDouble(itemPriceParse[1].toString());		
-				}
-
-				//=== Reviews ===
-				String itemReviewTimes = subelement1.select("div.a-icon-row a.a-size-small").text();// Number of Reviews
-
-				//=== Prime ===
-				String itemPrime = subelement1.select("div.a-row i").attr("aria-label");// Prime?
-
-				startScrapeLvl2_Amz(itemURL);
-
-				//System.out.println(itemName+";"+itemRating+";"+itemPrice+";"+itemReviewTimes+";"+itemPrime+";"+itemID+";"+itemImgURL);
-
-				//Set all scraped into database
-				//dbConn.ModDB("INSERT INTO [dbo].[Amz_Product_Details]([asin],[manufacturer_id],[category_id],[name],[product_description],[product_url],[number_of_reviews],[star_rating],[current_regular_price],[current_sale_price],[percent_off],[historic_low_price],[historic_high_price],[in_stock],[stock_status],[free_1d],[free_2d],[free_2d_date],[sold_by],[is_active],[created_by],[created_tms],[updated_by],[updated_tms])VALUES('"+itemID+"',null,0,'"+itemName+"','','"+itemURL+"',0,0.0,0.0,"+itemPrice+",null,0,0,0,0,null,null,null,'',1,'','','','')");
+	
+	public void categoriesListToDB(File file) throws FileNotFoundException {
+		Scanner sc = new Scanner(file);
+		while(sc.hasNextLine()) {
+			String line = sc.nextLine();
+			int level = Integer.parseInt(line.substring(0,1));
+			String url = line.replaceAll(".*https", "https").replaceAll("\\,*$", "");
+			String category;
+			if(level == 1) {
+				category = line.replaceAll("1,|,https.+", "").replaceAll("(\\s\\&\\s)|\\s", "-");
+			} else {
+				category = url.replaceAll(".*Best-Sellers-|\\/zgbs.*", "");
 			}
+			System.out.println(line);
+			connect.queryInsert("INSERT INTO AmazonBestSellersCategories ([Marketplace],[CategoryLevel],[CategoryName],[CategoryUrl],[Enabled])"
+					+ "VALUES ('"+Settings.AMAZON_MARKETPLACE+"',"+level+",'"+category+"','"+url+"',true)");
 		}
-	} // end startScrapeLvl1
-
-	public void startScrapeLvl2_Amz(String url) throws Exception{
-
-		final Document document = Jsoup.connect(url).get();		
-		Elements elements = document.select("div#dp.home_improvement.en_CA");		
-		for(Element element : elements.select("div#dp-container.a-container")) {	
-
-			//customer review
-			String itemName = element.select("div#title_feature_div").text();// imageURL
-			System.out.println(itemName);
-			//customer review
-			String itemImgURL = element.select("div#averageCustomerReviews").text();// imageURL
-			//System.out.println(itemImgURL);
-
-			// product features
-			String feature = element.select("div#featurebullets_feature_div").text();// imageURL
-			//System.out.println(feature);
-
-			//List Price / Current Price / Shipping / Saved %
-			String price = element.select("div#price").text();// imageURL
-			//System.out.println(price);
-
-
-		}
-
-	}// end start Scrape Lvl2
-
-	public void startScrapeLvl2_FstTech_insert(String url) throws Exception{
-
-		final Document document = Jsoup.connect(url).get();		// feed URL to start scrape
-
-		// item Descriptions?
-		String itemDescriptions = null;		
-		for(Element elements : document.select("div#ProductDetails")) {
-			itemDescriptions = elements.select("div.ProductDescriptions").text();
-		}
-
-		Elements elements = document.select("div.ProductBackdrop");		
-		for(Element element : elements.select("div.ProductOptionsBox")) {	
-
-			// item Price ?
-			String itemPrice = element.select("span#content_Price").text();
-
-			// item available ?
-			String itemAvaliable = element.select("input#AddToCart").attr("value").toString();
-			if(itemAvaliable.equals("")) {
-				itemAvaliable = "NOT AVALIABLE";
-			}else if(itemAvaliable.equals("ADD TO CART")) {
-				itemAvaliable = "AVALIABLE";
-			}
-
-			//Shipping free?
-			Boolean shippingFee_Bool = (element.select("div").text()).contains("ships free (worldwide)");
-			String itemFreeShipping = null;
-			if (shippingFee_Bool == true) {
-				itemFreeShipping = "Free Shipping";				
-			}else if(shippingFee_Bool == false) {
-				itemFreeShipping = "Shipping Fee";
-			}
-
-			//item descriptions
-			String itemDescrptions = element.select("div.ProductDescriptions").text();	
-
-
-			System.out.println(itemPrice+" | "+itemAvaliable+" | "+ itemFreeShipping +" | "+itemDescriptions);
-
-		}
-	}// end start Scrape Lvl2
-
+		sc.close();
+	}
 
 	public void add2DB_Camel(Camel camel, Amazon amz) throws SQLException {
 		

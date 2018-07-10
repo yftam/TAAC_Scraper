@@ -57,6 +57,8 @@ public class TAAC_Scraper {
 		String ts = dateFormat.format(new Date()).replace(" ", "-").replaceAll("\\/|\\:", "");
 		String scrape_dest = LocalOutputDest.SCRAPE_DEST;
 
+		scraper.connectDB();
+
 		if(Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_CAMEL_POPULAR_ITEMS) {
 		    Map<String, String> camelLoginCookies = connectCamel();
 			new File(scrape_dest+"/"+ts).mkdirs();
@@ -116,15 +118,27 @@ public class TAAC_Scraper {
 //			scraper.startAmazonBestSellersList("https://www.amazon.com/Best-Sellers/zgbs/amazon-devices/ref=zg_bs_nav_0", 2);
 			scraper.closeFile();
 		} else if (Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_SCRAPE_TOP_PRODUCTS_IN_BEST_SELLERS_CATEGORIES) {	//using links from scrape_mode 3 to scrape top products in Amazon Best Sellers sub-categories
-			File file = new File(scrape_dest+"/amazon_best_sellers/categories_list_3_levels_"+Settings.AMAZON_MARKETPLACE+".csv");
-			String outputDir = scrape_dest+"/amazon_best_sellers/"+ts+"-level-"+Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL;
+			File file = new File(scrape_dest+"/amazon_best_sellers/categories_to_scrape_"+Settings.AMAZON_MARKETPLACE+".csv");
+			String ts1 = new SimpleDateFormat("yyyy/MM/dd HH").format(new Date()).replace(" ", "-").replaceAll("\\/|\\:", "");
+			String outputDir = scrape_dest+"/amazon_best_sellers/"+ts1+"-level-"+Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL;
 			new File(outputDir).mkdirs();
-			DateFormat df = new SimpleDateFormat("HH:mm");
+			DateFormat df2 = new SimpleDateFormat("HH:mm");
 			
+			Scanner input = new Scanner(System.in);
+			int instance = 999;
+			while(instance > Settings.THREAD_NUM) {
+				System.out.println("Enter the instance number (1 - "+Settings.THREAD_NUM+"): ");
+				instance = input.nextInt() - 1;
+			}
+			input.close();
+			System.out.println("Instance "+(instance+1)+" initiated");
+			Thread.sleep(Settings.THREAD_NUM * 3000);
+			
+			int lineCount = 1;
 			Scanner sc = new Scanner(file);
 			while(sc.hasNextLine()) {
 				String line = sc.nextLine();
-				if(line.startsWith(Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL)) {
+				if(line.startsWith(Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL) && lineCount % Settings.THREAD_NUM == instance && lineCount >= Settings.SCRAPE_TOP_PRODUCTS_IN_BEST_SELLERS_CATEGORIES_START_LINE) {
 					String url = line.replaceAll(".*https", "https").replaceAll("\\,*$", "");
 					String category;
 					if(Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL.equals("1")) {
@@ -132,7 +146,7 @@ public class TAAC_Scraper {
 					} else {
 						category = url.replaceAll(".*Best-Sellers-|\\/zgbs.*", "");
 					}
-					String ts2 = df.format(new Date()).replace(" ", "-").replaceAll("\\/|\\:", "");
+					String ts2 = df2.format(new Date()).replace(" ", "-").replaceAll("\\/|\\:", "");
 					scraper.createFile(outputDir+"/"+ts2+"-"+category+".csv", outputDir+"/"+"error.txt");
 					scraper.filePrintln("Link,ASIN,TimeScraped,Product,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,"
 //							+ "LowestPrice,IsLowest,$Within,AveragePrice,%Below,$Below,"
@@ -144,9 +158,10 @@ public class TAAC_Scraper {
 					System.out.println("=================================================================================");
 					System.out.println();
 				}
+				lineCount++;
 			}
 			sc.close();
-			String dirToCombine = ts+"-level-"+Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL;
+			String dirToCombine = ts1+"-level-"+Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL;
 			String resultsDir = scrape_dest+"/amazon_best_sellers/"+dirToCombine;
 			scraper.startCombiningAmazonBestSellersTopProductResults(resultsDir);
 		} else if (Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_SCRAPE_TOP_PRODUCTS_IN_SPECIFIED_BEST_SELLERS_CATEGORY) {	//manually scrape top products in a specified Amazon Best Sellers sub-category
@@ -178,6 +193,8 @@ public class TAAC_Scraper {
 				url = Urls.AMAZON_CA_TODAYS_DEALS_DEAL_OF_THE_DAY;
 			}
 			scraper.startAmazonTodaysDeals(url);
+		} else if (Settings.SCRAPE_MODE == 33) {	//add categories list csv to database
+			scraper.categoriesListToDB(new File(scrape_dest+"/amazon_best_sellers/categories_list_3_levels_"+Settings.AMAZON_MARKETPLACE+".csv"));
 		} else if (Settings.SCRAPE_MODE == 90) {	//keepa url decoder
 			String url = "https://keepa.com/#!deals/%7B%22page%22%3A0%2C%22perPage%22%3A80%2C%22domainId%22%3A%221%22%2C%22excludeCategories%22%3A%5B%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%5D%2C%22includeCategories%22%3A%5B%5B%5D%2C%5B165796011%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%2C%5B%5D%5D%2C%22priceTypes%22%3A%5B0%5D%2C%22deltaRange%22%3A%5B0%2C2147483647%5D%2C%22deltaPercentRange%22%3A%5B20%2C2147483647%5D%2C%22salesRankRange%22%3A%5B-1%2C10000%5D%2C%22currentRange%22%3A%5B500%2C2147483647%5D%2C%22isLowest%22%3Atrue%2C%22isLowestOffer%22%3Afalse%2C%22isBackInStock%22%3Afalse%2C%22isOutOfStock%22%3Afalse%2C%22titleSearch%22%3A%22%22%2C%22isRangeEnabled%22%3Atrue%2C%22isFilterEnabled%22%3Atrue%2C%22filterErotic%22%3Afalse%2C%22hasReviews%22%3Afalse%2C%22isPrimeExclusive%22%3Afalse%2C%22sortType%22%3A4%2C%22dateRange%22%3A1%2C%22settings%22%3A%7B%22viewTyp%22%3A0%7D%2C%22isRisers%22%3Afalse%2C%22isHighest%22%3Afalse%7D";
 			url = url.replace("%22","\"").replace("%7B", "{").replace("7D", "}").replace("%3A", ":").replace("%2C", ",").replace("%5B", "[").replace("%5D", "]");
