@@ -66,8 +66,9 @@ public class Amazon extends ScrapeUtil {
 		productTitle = amazonPage.select("span#productTitle").text().replace(",", "");;
 		rating = Double.parseDouble(amazonPage.select("div#averageCustomerReviews").select("span#acrPopover").attr("title").replace(" out of 5 stars", ""));
 		try { reviews = Integer.parseInt(amazonPage.select("span#acrCustomerReviewText, span[data-hook=\"total-review-count\"]").first().text().replaceAll("[^\\d]", ""));
-		} catch (NullPointerException ne) { reviews = 0; }
-		answeredQ = Integer.parseInt(amazonPage.select("a#askATFLink > span").text().replaceAll("[^\\d]", ""));
+		} catch (Exception e) { reviews = 0; }
+		try { answeredQ = Integer.parseInt(amazonPage.select("a#askATFLink > span").text().replaceAll("[^\\d]", ""));
+		} catch (Exception e) { answeredQ = 0; }
 		String priceStr = amazonPage.select("span#priceblock_ourprice, span#priceblock_dealprice").text().replaceAll("\\$|\\,", "");
 		if(priceStr.equals("")) {	//most likely in the case of scraping Books
 			priceStr = amazonPage.select("span[class=\"a-size-medium a-color-price offer-price a-text-normal\"], span[class=\"a-size-medium a-color-price header-price\"]").text().replaceAll("\\$|\\,", "");
