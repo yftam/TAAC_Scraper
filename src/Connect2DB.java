@@ -6,6 +6,10 @@ public class Connect2DB {
 
 	public Connection con;
 
+	public Connect2DB() {
+		newConnection();
+	}
+	
 	public void newConnection() {
 		try {
 
@@ -15,6 +19,7 @@ public class Connect2DB {
 			String url = "jdbc:ucanaccess://" + path;
 
 			con = DriverManager.getConnection(url);
+			int in = 1;
 
 		} catch (Exception e) {
 			System.err.println(e);

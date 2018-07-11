@@ -63,7 +63,10 @@ public class TAAC_Scraper {
 			Settings.SCRAPE_MODE = Integer.parseInt(args[0]);
 		}
 		
-		scraper.connectDB();
+	    System.out.println("CONNECTION TO DATABASE STARTED ... ");
+		Connect2DB dbConn = new Connect2DB();
+        System.out.println("CONNECTION TO DATABASE SUCESSFUL ... ");
+		scraper.setDbConn(dbConn);
 
 		if(Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_CAMEL_POPULAR_ITEMS) {
 		    Map<String, String> camelLoginCookies = connectCamel();
@@ -143,9 +146,15 @@ public class TAAC_Scraper {
 			System.out.println("Instance "+(instance+1)+" of "+Settings.THREAD_NUM+" initiated");
 //			Thread.sleep(Settings.THREAD_NUM * 5000);
 
-			ResultSet rs = new Connect2DB().querySelect(
-					"SELECT [CategoryName],[CategoryUrl] FROM AmazonBestSellersCategories " +
-					"WHERE Marketplace = '"+Settings.AMAZON_MARKETPLACE+"' AND CategoryLevel = '"+Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL+"' AND Enabled = true");
+			ResultSet rs = dbConn.querySelect(
+//					"SELECT  "
+//			                + "ASIN "
+//			                + "FROM CamelResults "
+//			                + "WHERE "
+//			                + "ASIN = " + "'B0000Y7KFY'");
+					"SELECT [CategoryName],[CategoryUrl] FROM AmazonBestSellersCategories "
+					+
+					"WHERE Marketplace = '"+Settings.AMAZON_MARKETPLACE+"' AND CategoryLevel = "+Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL+" AND Enabled = true");
 			int lineCount = 1;
 			while(rs.next()) {
 				if(lineCount % Settings.THREAD_NUM == instance && lineCount >= Settings.SCRAPE_TOP_PRODUCTS_IN_BEST_SELLERS_CATEGORIES_START_LINE) {
