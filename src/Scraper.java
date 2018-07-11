@@ -253,7 +253,7 @@ public class Scraper {
 	                System.exit(1);
 	        	}
 	        }
-			delayBetween(1500,2500);
+			delayBetween(1000,2000);
 			count++;
 		}
 	}
@@ -346,11 +346,11 @@ public class Scraper {
 	public void addProductToDB(Amazon amz) throws SQLException {
 		
         if ( 
-		dbConn.querySelect("SELECT  "
+		!dbConn.querySelect("SELECT  "
                 + "ASIN "
                 + "FROM CamelResults "
                 + "WHERE "
-                + "ASIN = " + "'"+ amz.getAsin() + "'" ) == true) {
+                + "ASIN = " + "'"+ amz.getAsin() + "'" ).isBeforeFirst()) {
 
 		dbConn.queryInsert("INSERT INTO CamelResults ("
                 + "[Link], "

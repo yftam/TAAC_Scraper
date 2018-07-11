@@ -14,5 +14,6 @@ bin/
 keepaHTML/
 phantomjs-2.1.1-windows/
 selenium-java-3.13.0/
+resources/
 TAAC_Scraper.iml
 src/settings/LocalOutputDest.java
