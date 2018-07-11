@@ -1,7 +1,7 @@
 package settings;
 
 public class Settings {
-	public static int THREAD_NUM = 3;
+	public static int THREAD_NUM = 4;
 	
 	public static int SCRAPE_MODE = 4;
 	public static String AMAZON_MARKETPLACE = "US";

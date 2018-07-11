@@ -17,6 +17,10 @@ public class Camel {
 	
 	private static int totalItemsScraped;
 	
+	public Camel() {
+		
+	}
+	
 	public Camel(String url, Map<String, String> cookies) {
 		this.url = url;
 		loginCookies = cookies;
