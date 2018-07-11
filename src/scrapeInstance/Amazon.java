@@ -29,7 +29,7 @@ public class Amazon extends ScrapeUtil {
 	private String[] rankList;
 	
 	private boolean camelScraped = false;
-	private Camel camel;
+	private Camel camel = new Camel();
 	String lowestStatus = "", averageStatus = "";	//if no buybox, no info shown
 	Double lowestPrice = 0.0, averagePrice = 0.0, dollarWithinLowest = 0.0, dollarBelowAverage = 0.0;
 	

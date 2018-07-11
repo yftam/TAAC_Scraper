@@ -56,7 +56,13 @@ public class TAAC_Scraper {
 		DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 		String ts = dateFormat.format(new Date()).replace(" ", "-").replaceAll("\\/|\\:", "");
 		String scrape_dest = LocalOutputDest.SCRAPE_DEST;
-
+		long startTime, endTime;
+		startTime = System.nanoTime();
+		
+		if(args.length >= 1) {	//scrape mode entered in run argument
+			Settings.SCRAPE_MODE = Integer.parseInt(args[0]);
+		}
+		
 		scraper.connectDB();
 
 		if(Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_CAMEL_POPULAR_ITEMS) {
@@ -76,9 +82,6 @@ public class TAAC_Scraper {
 //					"pet-supplies","software","spine","sports-outdoors","tools-home-improvement","toys-games","video-games"
 					};
 //			String[] camelAmzCategory = {"toys-games","video-games"};
-			
-			long startTime, endTime;
-			startTime = System.nanoTime();
 	
 			try {
 				for (int i = 0; i < camelAmzCategory.length; i++) {
@@ -87,10 +90,6 @@ public class TAAC_Scraper {
 					scraper.startCamelPopularProductsURL(camelPopularProductsURL, "?deal=1&bn="+camelAmzCategory[i], camelLoginCookies);
 					scraper.closeFile();
 				}
-				endTime = System.nanoTime();
-				System.out.println("========= "+new Date().toString()+" "+(endTime-startTime)*0.000000001+" =========");
-				System.out.println("========= FINISHED =========");
-//				Thread.sleep(3000);		//1000 = 1 second
 			}catch (Exception e) {
 				System.err.println("FATAL ERROR");
 				e.printStackTrace();
@@ -126,13 +125,23 @@ public class TAAC_Scraper {
 			
 			Scanner input = new Scanner(System.in);
 			int instance = 999;
-			while(instance > Settings.THREAD_NUM) {
-				System.out.println("Enter the instance number (1 - "+Settings.THREAD_NUM+"): ");
-				instance = input.nextInt() - 1;
+			if(args.length > 2) {	//args with (MODE,THREAD_NUM,INSTANCE)
+				instance = Integer.parseInt(args[2]) - 1;
+				Settings.THREAD_NUM = Integer.parseInt(args[1]);
+			} else if(args.length > 1) {	//args with (MODE,INSTANCE)
+				instance = Integer.parseInt(args[1]) - 1;
+			} else {
+				while(instance > Settings.THREAD_NUM) {
+					System.out.println("Enter the instance number (1 - "+Settings.THREAD_NUM+"): ");
+					instance = input.nextInt() - 1;
+					if(instance == -1) {
+						System.exit(0);
+					}
+				}
 			}
 			input.close();
-			System.out.println("Instance "+(instance+1)+" initiated");
-			Thread.sleep(Settings.THREAD_NUM * 3000);
+			System.out.println("Instance "+(instance+1)+" of "+Settings.THREAD_NUM+" initiated");
+//			Thread.sleep(Settings.THREAD_NUM * 5000);
 			
 			int lineCount = 1;
 			Scanner sc = new Scanner(file);
@@ -210,5 +219,9 @@ public class TAAC_Scraper {
 			driver.get("https://keepa.com/#!deals/");
 			System.out.println(driver.getPageSource());
 		}
+		
+		endTime = System.nanoTime();
+		System.out.println("========= "+new Date().toString()+" "+(endTime-startTime)*0.000000001+" =========");
+		System.out.println("========= FINISHED =========");
 	}//end main
 }//end class

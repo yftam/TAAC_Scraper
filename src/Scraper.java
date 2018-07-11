@@ -34,7 +34,7 @@ public class Scraper {
 	private PrintWriter printwrite, errorpw;
 	private Map<String, String> loginCookies;
 	int totalItemsScraped = 0, totalItemsScrapedWithInfo = 0;
-	private Connect2DB connect;
+	private Connect2DB dbConn;
 
 	private int maxItemToScrape = 9999;
 
@@ -47,8 +47,8 @@ public class Scraper {
 	
 	public void connectDB() {
 	    System.out.println("CONNECTION TO DATABASE STARTED ... ");
-        connect = new Connect2DB();
-        connect.newConnection();
+        dbConn = new Connect2DB();
+        dbConn.newConnection();
         System.out.println("CONNECTION TO DATABASE SUCESSFUL ... ");
 	}
 	
@@ -133,14 +133,8 @@ public class Scraper {
 			amz.scrapeAmazonPage();
 			endTime = System.nanoTime();
 
-			// add2DB
-			add2DB_Camel(camel, amz);
+			addProductToDB(amz);	// add2DB
 
-
-			
-
-			
-			
 //			"ASIN,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,LowestPrice,$Within,$Within%,AveragePrice,$Below,$Below%,Stock,Seller,BestSeller,AmzChoice,IsAddOn,Rank"
 			printwrite.println(amz.getUrl()+","+amz.getAsin()+","+new Date().toString()+","+amz.getProductTitle()+","+camel.getPrime()+","+camel.getPriceInfoAmazonRow()+","+camel.getPriceInfo3rdPtyRow()+","+amz.getRating()+","+amz.getReviews()+","+amz.getAnsweredQ()+
 					",$"+amz.getPrice()+","+skipZero(amz.getSavingsDollar())+","+skipZero(amz.getSavingsPercentage())+","+amz.getCoupon()+","+amz.getPromo()+","+skipZero(amz.getLowestPrice())+","+amz.getLowestStatus()+","+skipZero(amz.getDollarWithinLowest())+","+skipZero(amz.getAveragePrice())+","+amz.getAverageStatus()+","+skipZero(amz.getDollarBelowAverage())+
@@ -228,6 +222,7 @@ public class Scraper {
 			try {
 				startTime = System.nanoTime();
 				amz.scrapeAmazonPage();
+				addProductToDB(amz);
 				endTime = System.nanoTime();
 
 //					"ASIN,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,LowestPrice,$Within,$Within%,AveragePrice,$Below,$Below%,Stock,Seller,BestSeller,AmzChoice,IsAddOn,Rank"
@@ -258,7 +253,7 @@ public class Scraper {
 	                System.exit(1);
 	        	}
 	        }
-			delayBetween(1000,2000);
+			delayBetween(1500,2500);
 			count++;
 		}
 	}
@@ -342,24 +337,22 @@ public class Scraper {
 				category = url.replaceAll(".*Best-Sellers-|\\/zgbs.*", "");
 			}
 			System.out.println(line);
-			connect.queryInsert("INSERT INTO AmazonBestSellersCategories ([Marketplace],[CategoryLevel],[CategoryName],[CategoryUrl],[Enabled])"
+			dbConn.queryInsert("INSERT INTO AmazonBestSellersCategories ([Marketplace],[CategoryLevel],[CategoryName],[CategoryUrl],[Enabled])"
 					+ "VALUES ('"+Settings.AMAZON_MARKETPLACE+"',"+level+",'"+category+"','"+url+"',true)");
 		}
 		sc.close();
 	}
 
-	public void add2DB_Camel(Camel camel, Amazon amz) throws SQLException {
+	public void addProductToDB(Amazon amz) throws SQLException {
 		
         if ( 
-		connect.querySelect("SELECT  "
+		dbConn.querySelect("SELECT  "
                 + "ASIN "
                 + "FROM CamelResults "
                 + "WHERE "
                 + "ASIN = " + "'"+ amz.getAsin() + "'" ) == true) {
 
-              	
-       		        
-		connect.queryInsert("INSERT INTO CamelResults ("
+		dbConn.queryInsert("INSERT INTO CamelResults ("
                 + "[Link], "
                 + "[ASIN], "
                 + "[Date_java], "
@@ -393,9 +386,9 @@ public class Scraper {
                 + "'" +amz.getAsin() + "',"
                 + "'" +new Date().toString() + "',"
                 + "'" +amz.getProductTitle().replace("'", "''") +"',"
-                + "'" +camel.getPrime() + "',"
-                + "'" +camel.getPriceInfoAmazonRow() + "',"
-                + "'" +camel.getPriceInfo3rdPtyRow()+ "',"
+                + "'" +amz.getCamel().getPrime() + "',"
+                + "'" +amz.getCamel().getPriceInfoAmazonRow() + "',"
+                + "'" +amz.getCamel().getPriceInfo3rdPtyRow()+ "',"
                 + "'" +amz.getRating() + "',"
                 + "'" +amz.getReviews() + "',"
                 + "'" +amz.getAnsweredQ()+ "',"
@@ -423,7 +416,7 @@ public class Scraper {
         	
         	System.out.println ("ITEM EXISTS ... SKIP INSERT...");
 //        	
-//			connect.queryInsert("UPDATE CamelResults ("
+//			dbConn.queryInsert("UPDATE CamelResults ("
 //					+ "SET "
 //                    + "[Link] = " + amz.getUrl() + ", "
 //                    + "[Date_java] = " + new Date().toString() + ", "
