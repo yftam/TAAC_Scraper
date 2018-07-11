@@ -45,11 +45,8 @@ public class Scraper {
 		errorpw = new PrintWriter(new FileOutputStream (new File(errorFileName),true));
 	}
 	
-	public void connectDB() {
-	    System.out.println("CONNECTION TO DATABASE STARTED ... ");
-        dbConn = new Connect2DB();
-        dbConn.newConnection();
-        System.out.println("CONNECTION TO DATABASE SUCESSFUL ... ");
+	public void setDbConn(Connect2DB dbConn) {
+        this.dbConn = dbConn;
 	}
 	
 	public void filePrintln(String print) {
