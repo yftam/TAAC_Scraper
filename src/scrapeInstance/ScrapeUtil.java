@@ -24,7 +24,7 @@ public class ScrapeUtil {
 	    bd = bd.setScale(places, RoundingMode.HALF_UP);
 	    return bd.doubleValue();
 	}
-	/*
+	
 	public String skipZero(int toCheck) {
 		if(toCheck == 0) {
 			return " ";
@@ -47,5 +47,5 @@ public class ScrapeUtil {
 			returnStr = returnStr + "#" + rankArr[i] + ",";
 		}
 		return returnStr;
-	}*/
+	}
 }
