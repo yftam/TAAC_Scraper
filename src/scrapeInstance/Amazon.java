@@ -1,5 +1,8 @@
 package scrapeInstance;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -7,6 +10,7 @@ import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.jsoup.Connection.Response;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -15,6 +19,8 @@ import org.jsoup.select.Elements;
 public class Amazon extends ScrapeUtil {
 
 	private String marketplace, url, asin;
+	private String scrapedDateTime;
+	private String category = "";
 	private Document amazonPage;
 	private String productTitle = "";
 	private Double rating = 0.0;
@@ -43,10 +49,10 @@ public class Amazon extends ScrapeUtil {
 	}
 
 	public Amazon(String marketplace, String urlOrAsin) {
-		this.setMarketplace(marketplace);
+		this.marketplace = marketplace;
 		if(urlOrAsin.contains("amazon") || urlOrAsin.contains("/")) {	//passing in url
 			url = urlOrAsin;
-			asin = findMatch(urlOrAsin, "(\\/([0-9]{10}|B([A-Z]|[0-9]){9})\\/)|Asin\\=B([A-Z]|[0-9]){9}").replace("Asin=", "").replace("/", "");
+			asin = findMatch(urlOrAsin, "(\\/([0-9]{10}|B([A-Z]|[0-9]){9}|[0-9]{9}[A-Z]{1})\\/)|Asin\\=B([A-Z]|[0-9]){9}").replace("Asin=", "").replace("/", "");
 		} else {	//passing in ASIN
 			asin = urlOrAsin;
 			if(marketplace == "US") {
@@ -55,23 +61,34 @@ public class Amazon extends ScrapeUtil {
 				url = "https://www.amazon.ca/gp/product/"+asin;
 			}
 		}
+		SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+		scrapedDateTime = df.format(new Date());
 	}
 
 	public void scrapeAmazonPage() throws Exception {
 		totalItemsScraped++;
 
-		amazonPage = Jsoup.connect("https://www.amazon.com/gp/product/"+asin).get();
+		Response response = Jsoup.connect(url)
+				.ignoreContentType(true)
+				.userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36")  
+				.referrer("http://www.google.com")
+				.timeout(12000)
+				.followRedirects(true)
+				.execute();
+		amazonPage = response.parse();
+//		amazonPage = Jsoup.connect(url).get();
 
 		//constant fields
 		productTitle = amazonPage.select("span#productTitle").text().replace(",", "");;
-		rating = Double.parseDouble(amazonPage.select("div#averageCustomerReviews").select("span#acrPopover").attr("title").replace(" out of 5 stars", ""));
+		try { rating = Double.parseDouble(amazonPage.select("div#averageCustomerReviews").select("span#acrPopover").attr("title").replace(" out of 5 stars", ""));
+		} catch (Exception e) { rating = 0.0; }
 		try { reviews = Integer.parseInt(amazonPage.select("span#acrCustomerReviewText, span[data-hook=\"total-review-count\"]").first().text().replaceAll("[^\\d]", ""));
 		} catch (Exception e) { reviews = 0; }
 		try { answeredQ = Integer.parseInt(amazonPage.select("a#askATFLink > span").text().replaceAll("[^\\d]", ""));
 		} catch (Exception e) { answeredQ = 0; }
-		String priceStr = amazonPage.select("span#priceblock_ourprice, span#priceblock_dealprice").text().replaceAll("\\$|\\,", "");
+		String priceStr = amazonPage.select("span#priceblock_ourprice, span#priceblock_dealprice, span#priceblock_saleprice").text().replaceAll("\\D*\\$|\\,", "");
 		if(priceStr.equals("")) {	//most likely in the case of scraping Books
-			priceStr = amazonPage.select("span[class=\"a-size-medium a-color-price offer-price a-text-normal\"], span[class=\"a-size-medium a-color-price header-price\"]").text().replaceAll("\\$|\\,", "");
+			priceStr = amazonPage.select("span[class=\"a-size-medium a-color-price offer-price a-text-normal\"], span[class=\"a-size-medium a-color-price header-price\"]").text().replaceAll("\\D*\\$|\\,", "");
 		}
 		if(url.contains("_videogames_")) {
 			priceStr = priceStr.trim().replace(" ", ".");
@@ -79,11 +96,12 @@ public class Amazon extends ScrapeUtil {
 		price = priceStr.equals("") ? 0 : Double.parseDouble(priceStr);
 		String savings = amazonPage.select("tr#regularprice_savings > td.a-span12, tr#dealprice_savings > td.a-span12").text();
 		if(savings.equals("")) {	//most likely in the case of scraping Books
-			savings = amazonPage.select("span[class=\"a-size-base a-color-secondary\"]:contains($)").text().replaceAll("^\\D{1,}\\$", "");
+			savings = amazonPage.select("span[class=\"a-size-base a-color-secondary\"]:contains($)").text().replaceAll("^\\D*\\$", "");
 		}
 		if (savings.contains("%")) {
+			savings = savings.replaceAll("^\\D*\\$", "").trim();
 			String[] savingsSplit = savings.split(" ");
-			savingsDollar = Double.parseDouble(savingsSplit[0].replaceAll("\\$|\\,", ""));
+			savingsDollar = Double.parseDouble(savingsSplit[0].replaceAll("\\D*\\$|\\,", ""));
 			savingsPercentage = Integer.parseInt(savingsSplit[1].replaceAll("\\(|\\)|\\%", ""));
 		}
 		availability = amazonPage.select("div#availability, span#availability, span#pantry-availability").text().replace(",", "");
@@ -114,9 +132,9 @@ public class Amazon extends ScrapeUtil {
 		amazonChoiceCategory = amazonPage.select("span.ac-keyword-link").text();
 		try { promo = amazonPage.select("div#unclippedCoupon, div#clippedCoupon, div#applicablePromotionList_feature_div, div#applicable_promotion_list_sec").first().text().replace(",", "");
 		} catch (NullPointerException ne) { }
-		coupon = promo.replaceAll("([=-z]|\\s|[ -#]|[&--]|\\/|\\.{2,}){1,}\\.{0,1}", "");
+//		coupon = promo.replaceAll("([=-z]|\\s|[ -#]|[&--]|\\/|\\.{2,}){1,}\\.{0,1}", "");
 		if(!promo.equals("")) {
-			findMatch(promo, "(\\$\\d+(\\.\\d+)?|\\d+\\%)");
+			coupon = findMatch(promo, "(\\$\\s*\\d+(\\.\\d+)?|\\d+\\%)").replace(" ", "");
 		}
 		addon = amazonPage.select("div.a-box-group, div#addOnItemHeader").text().contains("Add-on") ? "Yes" : "No";
 		
@@ -187,6 +205,22 @@ public class Amazon extends ScrapeUtil {
 
 	public void setAsin(String asin) {
 		this.asin = asin;
+	}
+
+	public String getScrapedDateTime() {
+		return scrapedDateTime;
+	}
+
+	public void setScrapedDateTime(String scrapedDateTime) {
+		this.scrapedDateTime = scrapedDateTime;
+	}
+
+	public String getCategory() {
+		return category;
+	}
+
+	public void setCategory(String category) {
+		this.category = category;
 	}
 
 	public Document getAmazonPage() {
