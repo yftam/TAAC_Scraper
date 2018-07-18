@@ -21,6 +21,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.jsoup.Jsoup;
+import org.jsoup.Connection.Response;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -41,6 +42,7 @@ public class Scraper {
 
 	public void createFile(String fileName, String errorFileName) throws IOException{
 		file = new File(fileName);
+		file.delete();
 		file.createNewFile();
 		printwrite = new PrintWriter(new FileOutputStream (new File(fileName),true));
 		errorpw = new PrintWriter(new FileOutputStream (new File(errorFileName),true));
@@ -96,13 +98,6 @@ public class Scraper {
 		}
 	}// end startCamelPopularProductsURL
 	
-	public void delayBetween(int low, int high) throws InterruptedException {
-		Random r = new Random();
-		int delay = r.nextInt(high-low) + low;
-		System.out.println("Delaying "+delay+ "ms.");
-		Thread.sleep(delay);
-	}
-	
 	public void startCamelProductPage(String url) throws Exception {
 		Camel camel = new Camel(url, loginCookies);
 		try {
@@ -126,7 +121,7 @@ public class Scraper {
 		
 		Amazon amz = new Amazon(Settings.AMAZON_MARKETPLACE, camel);
 		startAmazonProductPage(amz);
-		delayBetween(500, 1000);	//setDelay
+		util.delayBetween(500, 1000);	//setDelay
 	}
 	
 	public void startAmazonProductPage(Amazon amz) throws Exception {
@@ -135,24 +130,27 @@ public class Scraper {
 			startTime = System.nanoTime();
 			amz.scrapeAmazonPage();
 			endTime = System.nanoTime();
-			System.out.println(amz.getScrapedDateTime());
 
 //			"Category,Link,ASIN,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,LowestPrice,$Within,$Within%,AveragePrice,$Below,$Below%,Stock,Seller,BestSeller,AmzChoice,IsAddOn,Rank"
 			if(amz.isCamelScraped()) {
 				printwrite.println(amz.getUrl()+","+amz.getMarketplace()+","+amz.getAsin()+","+amz.getScrapedDateTime()+","+amz.getProductTitle()+","+amz.getCamel().getPrime()+","+amz.getCamel().getPriceInfoAmazonRow()+","+amz.getCamel().getPriceInfo3rdPtyRow()+","+amz.getRating()+","+amz.getReviews()+","+amz.getAnsweredQ()+
-						",$"+skipZero(amz.getPrice())+","+skipZero(amz.getSavingsDollar())+","+skipZero(amz.getSavingsPercentage())+","+amz.getCoupon()+","+amz.getPromo()+","+skipZero(amz.getLowestPrice())+","+amz.getLowestStatus()+","+skipZero(amz.getDollarWithinLowest())+","+skipZero(amz.getAveragePrice())+","+amz.getAverageStatus()+","+skipZero(amz.getDollarBelowAverage())+
-						","+amz.getAvailability()+","+amz.getMerchant()+","+amz.getPrimeExclusive()+","+amz.getBestSellerCategory()+","+amz.getAmazonChoiceCategory()+","+amz.getAddon()+","+printRank(amz.getRankList()));
+						",$"+util.skipZero(amz.getPrice())+","+util.skipZero(amz.getSavingsDollar())+","+util.skipZero(amz.getSavingsPercentage())+","+amz.getCoupon()+","+amz.getPromo()+","+util.skipZero(amz.getLowestPrice())+","+amz.getLowestStatus()+","+util.skipZero(amz.getDollarWithinLowest())+","+util.skipZero(amz.getAveragePrice())+","+amz.getAverageStatus()+","+util.skipZero(amz.getDollarBelowAverage())+
+						","+amz.getAvailability()+","+amz.getMerchant()+","+amz.getPrimeExclusive()+","+amz.getBestSellerCategory()+","+amz.getAmazonChoiceCategory()+","+amz.getAddon()+","+util.printRank(amz.getRankList()));
 			} else {
 				printwrite.println(amz.getUrl()+","+amz.getMarketplace()+","+amz.getAsin()+","+amz.getScrapedDateTime()+","+amz.getProductTitle()+","+amz.getRating()+","+amz.getReviews()+","+amz.getAnsweredQ()+
-						","+skipZero(amz.getPrice())+","+skipZero(amz.getSavingsDollar())+","+skipZero(amz.getSavingsPercentage())+","+amz.getCoupon()+","+amz.getPromo()+
-						","+amz.getAvailability()+","+amz.getMerchant()+","+amz.getPrimeExclusive()+","+amz.getBestSellerCategory()+","+amz.getAmazonChoiceCategory()+","+amz.getAddon()+","+printRank(amz.getRankList()));
+						","+util.skipZero(amz.getPrice())+","+util.skipZero(amz.getSavingsDollar())+","+util.skipZero(amz.getSavingsPercentage())+","+amz.getCoupon()+","+amz.getPromo()+
+						","+amz.getAvailability()+","+amz.getMerchant()+","+amz.getPrimeExclusive()+","+amz.getBestSellerCategory()+","+amz.getAmazonChoiceCategory()+","+amz.getAddon()+","+util.printRank(amz.getRankList()));
 			}
 			System.out.println(" -> AMZ: "+amz.getAsin()+" | "+amz.getProductTitle());
 			System.out.println(" -> AMZ: "+amz.getRating()+" Rating | "+amz.getReviews()+" Reviews | "+amz.getAnsweredQ()+" answered Q | $"+amz.getPrice()+" | $"+amz.getSavingsDollar()+" | "+amz.getSavingsPercentage()+"% | Coupon-"+amz.getCoupon()+amz.getPromo()+" | "+amz.getAvailability()+" | "+amz.getMerchant());			
-			System.out.println(" -> AMZ: bestSellerCategory-"+amz.getBestSellerCategory()+ " | AmzChoiceCategory-"+amz.getAmazonChoiceCategory()+" | "+amz.getAddon()+ " | "+printRank(amz.getRankList()));
+			System.out.println(" -> AMZ: bestSellerCategory-"+amz.getBestSellerCategory()+ " | AmzChoiceCategory-"+amz.getAmazonChoiceCategory()+" | "+amz.getAddon()+ " | "+util.printRank(amz.getRankList()));
 			if(amz.isCamelScraped()) System.out.println(" -> CAMEL: LowestPrice-"+amz.getLowestPrice()+"-%within"+amz.getLowestStatus()+"-$within$"+amz.getDollarWithinLowest()+" | BelowAverage-"+amz.getAveragePrice()+"-%below"+amz.getAverageStatus()+"-$below$"+amz.getDollarBelowAverage());
 			
-			dbConn.upsertAmazonProduct(amz);
+			if(Settings.DB_INSTANT_UPSERT || Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_CAMEL_POPULAR_ITEMS || Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_CAMEL_MANUAL_LIST) {
+				dbConn.upsertAmazonProduct(amz);
+			} else {
+				System.out.println("DB_INSTANT_UPSERT OFF, UPSERT AT END");
+			}
 			System.out.println(" -> Time used to scrape AMZ page: "+(endTime-startTime)*0.000000001);
 			totalItemsScrapedWithInfo = Amazon.getTotalItemsScrapedWithInfo();
 		} catch (Exception e) {
@@ -175,7 +173,15 @@ public class Scraper {
 	
 	public void startAmazonBestSellersList(String url, int level) throws Exception {
 		try {
-			Document amazonBestSellersPage = Jsoup.connect(url).get();
+			Response response = Jsoup.connect(url)
+					.ignoreContentType(true)
+					.userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36")  
+					.referrer("http://www.google.com")
+					.timeout(12000)
+					.followRedirects(true)
+					.execute();
+			Document amazonBestSellersPage = response.parse();
+//			Document amazonBestSellersPage = Jsoup.connect(url).get();
 			Element list;
 			if(level == 1) {
 				list = amazonBestSellersPage.select("ul#zg_browseRoot > ul").first();
@@ -196,7 +202,7 @@ public class Scraper {
 					System.out.println(spaces+"Level: "+level+" Category: "+category+" - URL: "+categoryUrl);
 					printwrite.println(level+commas+","+category+","+categoryUrl);
 //				closeFile();
-					delayBetween(1000,2000);
+					util.delayBetween(1000,2000);
 				if(level < Settings.LEVELS_TO_GET_FOR_LIST_OF_BEST_SELLERS_CATEGORIES)
 						startAmazonBestSellersList(categoryUrl, level+1);
 				}
@@ -215,7 +221,15 @@ public class Scraper {
 	
 	public void startAmazonBestSellersTopProducts(String url, String category) throws Exception {
 		System.out.println(category+" - "+url);
-		Document amazonBestSellersPage = Jsoup.connect(url).get();
+		Response response = Jsoup.connect(url)
+				.ignoreContentType(true)
+				.userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36")  
+				.referrer("http://www.google.com")
+				.timeout(12000)
+				.followRedirects(true)
+				.execute();
+		Document amazonBestSellersPage = response.parse();
+//		Document amazonBestSellersPage = Jsoup.connect(url).get();
 		String urlPrefix = "https://www.amazon.com";
 		String itemURL;
 		if(Settings.AMAZON_MARKETPLACE.equals("CA")) {
@@ -225,25 +239,26 @@ public class Scraper {
 		Elements elements = amazonBestSellersPage.select("div#zg_centerListWrapper");
 		for(Element element : elements.select("div.zg_itemImmersion")) {
 			itemURL = urlPrefix + element.select("a.a-link-normal").attr("href");
-			System.out.println("#"+count+": "+Settings.AMAZON_MARKETPLACE+" | "+category+" | "+itemURL);
 
 			Amazon amz = new Amazon(Settings.AMAZON_MARKETPLACE, itemURL);
 			amz.setCategory(category);
+			System.out.println("#"+count+": "+amz.getScrapedDateTime()+" | "+Settings.AMAZON_MARKETPLACE+" | "+category+" | "+itemURL);
 			startAmazonProductPage(amz);
-			delayBetween(1000,2000);
+			util.delayBetween(1000,2000);
 			count++;
+			if(count > Settings.TEST_MAX_ITEM_TO_SCRAPE) break;
 		}
 	}
 	
-	public void startCombiningAmazonBestSellersTopProductResults(String resultsDir) throws Exception {
-		File resultsFolder = new File(resultsDir);
+	public void startCombiningAmazonBestSellersTopProductResults(String outputDir, String outputFolderName) throws Exception {
+		File resultsFolder = new File(outputDir);
 		FilenameFilter filter = new FilenameFilter() {
 	        @Override
 	        public boolean accept(File dir, String name) {
 	            return name.toLowerCase().endsWith(".csv");
 	        }
 	    };
-	    File combinedResultFile = new File(resultsFolder+"/COMBINED_RESULTS.csv");
+	    File combinedResultFile = new File(resultsFolder+"/"+outputFolderName+"_COMBINED_RESULTS.csv");
 	    combinedResultFile.delete();
 	    combinedResultFile.createNewFile();
 		printwrite = new PrintWriter(new FileOutputStream (combinedResultFile,true));
@@ -251,7 +266,7 @@ public class Scraper {
 				+ "Coupon,Promo,Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank");
 		
 		for(File file : resultsFolder.listFiles(filter)) {
-			String category = file.getName().replaceAll("\\d+\\-|.csv", "");
+			String category = file.getName().replaceAll("^[A-Z]{2}\\-|\\d+\\-|.csv", "");
 			System.out.println(file.getName());
 			Scanner sc = new Scanner(file);
 			while(sc.hasNextLine()) {
@@ -260,44 +275,55 @@ public class Scraper {
 					printwrite.println(category+","+line);
 				}
 			}
+			sc.close();
 		}
 		printwrite.close();
 	}
 	
+	public void upsertCombinedResults(String outputDir, String outputFolderName) throws FileNotFoundException, SQLException {
+		File combinedResultFile = new File(outputDir+"/"+outputFolderName+"_COMBINED_RESULTS.csv");
+		dbConn.setAllProductInactive(Settings.AMAZON_MARKETPLACE);
+		Scanner sc = new Scanner(combinedResultFile);
+		while(sc.hasNextLine()) {
+			String line = sc.nextLine();
+			if(!line.startsWith("Category")) {
+				Amazon amz = loadAmazonProductResult(line);
+				dbConn.upsertAmazonProduct(amz);
+			}
+		}
+		sc.close();
+	}
+	
+	public Amazon loadAmazonProductResult(String amazonProductResult) {
+		Amazon amz = new Amazon();
+		String[] result = amazonProductResult.split(",");
+		int splitCount = 0;
+		amz.setCategory(result[splitCount]); splitCount++;
+		amz.setUrl(result[splitCount]); splitCount++;
+		amz.setMarketplace(result[splitCount]); splitCount++;
+		amz.setAsin(result[splitCount]); splitCount++;
+		amz.setScrapedDateTime(result[splitCount]); splitCount++;
+		amz.setProductTitle(result[splitCount]); splitCount++;
+		amz.setRating(Double.parseDouble(result[splitCount].replace("$",""))); splitCount++;
+		amz.setReviews(Integer.parseInt(result[splitCount])); splitCount++;
+		amz.setAnsweredQ(Integer.parseInt(result[splitCount])); splitCount++;
+		amz.setPrice(result[splitCount].replace(" ", "").equals("") ? 0.0 : Double.parseDouble(result[splitCount].replace("$",""))); splitCount++;
+		amz.setSavingsDollar(result[splitCount].replace(" ", "").equals("") ? 0.0 : Double.parseDouble(result[splitCount].replace("$",""))); splitCount++;
+		amz.setSavingsPercentage(result[splitCount].replace(" ", "").equals("") ? 0 : Integer.parseInt(result[splitCount].replace("%",""))); splitCount++;
+		amz.setCoupon(result[splitCount]); splitCount++;
+		amz.setPromo(result[splitCount]); splitCount++;
+		amz.setAvailability(result[splitCount]); splitCount++;
+		amz.setMerchant(result[splitCount]); splitCount++;
+		amz.setPrimeExclusive(result[splitCount]); splitCount++;
+		amz.setBestSellerCategory(result[splitCount]); splitCount++;
+		amz.setAmazonChoiceCategory(result[splitCount]); splitCount++;
+		amz.setAddon(result[splitCount]); splitCount++;
+		amz.setRank(result[splitCount]); splitCount++;
+		return amz;
+	}
+	
 	public void startAmazonTodaysDeals(String url) {
 		
-	}
-	
-	private String skipZero(int toCheck) {
-		if(toCheck == 0) {
-			return " ";
-		} else {
-			return toCheck+"";
-		}
-	}
-	
-	private String skipZero(double toCheck) {
-		if(toCheck == 0.0) {
-			return " ";
-		} else {
-			return ""+toCheck;
-		}
-	}
-	
-	private String printRank(String[] rankArr) {
-		String returnStr = "";
-		for(int i = 0; i < rankArr.length; i++) {
-			returnStr = returnStr + "#" + rankArr[i] + ",";
-		}
-		return returnStr;
-	}
-	
-	public double round(double value, int places) {
-	    if (places < 0) throw new IllegalArgumentException();
-
-	    BigDecimal bd = new BigDecimal(value);
-	    bd = bd.setScale(places, RoundingMode.HALF_UP);
-	    return bd.doubleValue();
 	}
 	
 	public void categoriesListToDB(File file) throws FileNotFoundException {

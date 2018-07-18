@@ -5,6 +5,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Date;
@@ -27,7 +28,6 @@ import org.openqa.selenium.phantomjs.*;
 import org.openqa.selenium.remote.DesiredCapabilities;
 
 public class TAAC_Scraper {
-	private static int instance_count = 0;
 	
 	private static Map<String, String> connectCamel() {
 		Map<String, String> camelLoginCookies = null;
@@ -53,13 +53,13 @@ public class TAAC_Scraper {
 	}
 
 	public static void main(String[] args) throws Exception {
-		instance_count++;
 		Scraper scraper = new Scraper();
 		DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 		String ts = dateFormat.format(new Date()).replace(" ", "-").replaceAll("\\/|\\:", "");
 		String scrape_dest = LocalOutputDest.SCRAPE_DEST;
 		long startTime, endTime;
 		startTime = System.nanoTime();
+		Scanner input = null;
 		
 		if(args.length >= 1) {	//scrape mode entered in run argument
 			Settings.SCRAPE_MODE = Integer.parseInt(args[0]);
@@ -67,10 +67,8 @@ public class TAAC_Scraper {
 				Settings.AMAZON_MARKETPLACE = args[1];
 			}
 		}
-		System.out.println("instance_count = "+instance_count);
-	    System.out.println("CONNECTION TO DATABASE STARTED ... ");
+	    
 		DatabaseConnection dbConn = new DatabaseConnection();
-        System.out.println("CONNECTION TO DATABASE SUCESSFUL ... ");
 		scraper.setDbConn(dbConn);
 
 		if(Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_CAMEL_POPULAR_ITEMS) {
@@ -131,17 +129,18 @@ public class TAAC_Scraper {
 			//*********** 4 means scrape mode 4, US means marketplace eg)US/CA, 6 means total number of instances, 1 means the instance number
 //			File file = new File(scrape_dest+"/amazon_best_sellers/categories_to_scrape_"+Settings.AMAZON_MARKETPLACE+".csv");
 			String ts1 = new SimpleDateFormat("yyyy/MM/dd HH").format(new Date()).replace(" ", "-").replaceAll("\\/|\\:", "");
-			String outputDir = scrape_dest+"/amazon_best_sellers/"+Settings.AMAZON_MARKETPLACE+"-"+ts1+"-level-"+Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL;
+			String outputFolderName = ts1+"-"+Settings.AMAZON_MARKETPLACE+"-level-"+Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL;
+			String outputDir = scrape_dest+"/amazon_best_sellers/"+outputFolderName;
 			new File(outputDir).mkdirs();
 			DateFormat df2 = new SimpleDateFormat("HH:mm");
 			
-			Scanner input = new Scanner(System.in);
+			input = new Scanner(System.in);
 			int instance = 999;
 			if(args.length > 3) {	//args with (MODE,MARKETPLACE,THREAD_NUM,INSTANCE)
 				Settings.THREAD_NUM = Integer.parseInt(args[2]);
-				instance = Integer.parseInt(args[3]) - 1;
+				instance = Integer.parseInt(args[3]);
 			} else if(args.length > 2) {	//args with (MODE,MARKETPLACE,INSTANCE)
-				instance = Integer.parseInt(args[2]) - 1;
+				instance = Integer.parseInt(args[2]);
 			} else {
 				while(instance > Settings.THREAD_NUM) {
 					System.out.println("Enter the instance number (1 - "+Settings.THREAD_NUM+"): ");
@@ -152,10 +151,10 @@ public class TAAC_Scraper {
 					}
 				}
 			}
-			input.close();
+			
 			System.out.println("Instance "+instance+" of "+Settings.THREAD_NUM+" initiated");
 			instance = instance == Settings.THREAD_NUM ? 0 : instance;
-//			Thread.sleep(Settings.THREAD_NUM * 5000);
+//			Thread.sleep(Settings.THREAD_NUM * 500);
 
 			ResultSet rs = dbConn.querySelect(
 					"SELECT [CategoryName],[CategoryUrl] FROM AmazonBestSellersCategories "
@@ -169,8 +168,12 @@ public class TAAC_Scraper {
 					scraper.createFile(outputDir+"/"+Settings.AMAZON_MARKETPLACE+"-"/*+ts2+"-"*/+category+".csv", outputDir+"/"+"error.txt");
 					scraper.filePrintln("Link,Marketplace,ASIN,TimeScraped,Product,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,"
 							+ "Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank");
+					String instanceTrackFileName = outputDir+"/TRACK-"+Settings.AMAZON_MARKETPLACE+"-"+category+".track";
+					File instanceTrackFile = new File(instanceTrackFileName);
+					instanceTrackFile.createNewFile();
 					scraper.startAmazonBestSellersTopProducts(url, category);
 					scraper.closeFile();
+					instanceTrackFile.delete();
 					System.out.println("=================================================================================");
 					System.out.println("==================== FINISHED SCRAPING "+category+" CATEGORY ====================");
 					System.out.println("=================================================================================");
@@ -178,7 +181,18 @@ public class TAAC_Scraper {
 				}
 				lineCount++;
 			}
-			scraper.startCombiningAmazonBestSellersTopProductResults(outputDir);
+			FilenameFilter filter = new FilenameFilter() {
+		        @Override
+		        public boolean accept(File dir, String name) {
+		            return name.toLowerCase().endsWith(".track");
+		        }
+		    };
+		    if(new File(outputDir).list(filter).length > 0 && !Settings.DB_INSTANT_UPSERT) {
+		    	System.out.println("OTHER INSTANCES STILL RUNNING...");
+		    } else {
+		    	scraper.startCombiningAmazonBestSellersTopProductResults(outputDir, outputFolderName);
+		    	if(!Settings.DB_INSTANT_UPSERT) scraper.upsertCombinedResults(outputDir, outputFolderName);
+		    }
 		} else if (Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_SCRAPE_TOP_PRODUCTS_IN_SPECIFIED_BEST_SELLERS_CATEGORY) {	//manually scrape top products in a specified Amazon Best Sellers sub-category
 			String outputDir = scrape_dest+"/amazon_best_sellers/manualTest";
 			new File(outputDir).mkdirs();
@@ -198,10 +212,11 @@ public class TAAC_Scraper {
 			System.out.println("=================================================================================");
 			System.out.println();
 		} else if (Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_COMBINE_TOP_PRODUCTS_RESULTS) {	//manually combining all Amazon Best Sellers sub-category scraped products into a single csv file
-			String dirToCombine = "CA-20180716-00-level-1";
+			String dirToCombine = "20180717-19-US-level-1";
 			String resultsDir = scrape_dest+"/amazon_best_sellers/"+dirToCombine;
 
-			scraper.startCombiningAmazonBestSellersTopProductResults(resultsDir);
+			scraper.startCombiningAmazonBestSellersTopProductResults(resultsDir, dirToCombine);
+			scraper.upsertCombinedResults(resultsDir, dirToCombine);
 		} else if (Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_SCRAPE_TODAYS_DEALS_DEAL_OF_THE_DAY) {	//scrape Amazon Today's Deals -> Deal of the Day filter
 			String url = Urls.AMAZON_US_TODAYS_DEALS_DEAL_OF_THE_DAY;	//by default use Amazon US url
 			if (Settings.AMAZON_MARKETPLACE == "CA") {
@@ -226,9 +241,15 @@ public class TAAC_Scraper {
 			System.out.println(driver.getPageSource());
 		}
 		
-		dbConn.con.close();
+//		dbConn.con.close();
 		endTime = System.nanoTime();
 		System.out.println("========= "+new Date().toString()+" "+(endTime-startTime)*0.000000001+" =========");
 		System.out.println("========= FINISHED =========");
+
+		input = new Scanner(System.in);
+		System.out.println("Enter anything to end instance.");
+		String end = input.next();
+		input.close();
+		System.out.println("END instance");
 	}//end main
 }//end class

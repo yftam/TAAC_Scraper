@@ -2,10 +2,18 @@ package scrapeInstance;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ScrapeUtil {
+	
+	public void delayBetween(int low, int high) throws InterruptedException {
+		Random r = new Random();
+		int delay = r.nextInt(high-low) + low;
+		System.out.println("Delaying "+delay+ "ms.");
+		Thread.sleep(delay);
+	}
 	
 	public String findMatch(String toFind, String pattern) {
 		Pattern p = Pattern.compile(pattern);
@@ -44,7 +52,7 @@ public class ScrapeUtil {
 	public String printRank(String[] rankArr) {
 		String returnStr = "";
 		for(int i = 0; i < rankArr.length; i++) {
-			returnStr = returnStr + "#" + rankArr[i] + ",";
+			returnStr = returnStr + "#" + rankArr[i] + ";";
 		}
 		return returnStr;
 	}
