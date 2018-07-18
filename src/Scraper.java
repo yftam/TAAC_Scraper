@@ -149,7 +149,7 @@ public class Scraper {
 			if(Settings.DB_INSTANT_UPSERT || Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_CAMEL_POPULAR_ITEMS || Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_CAMEL_MANUAL_LIST) {
 				dbConn.upsertAmazonProduct(amz);
 			} else {
-				System.out.println("DB_INSTANT_UPSERT OFF, UPSERT AT END");
+//				System.out.println("DB_INSTANT_UPSERT OFF, UPSERT AT END");
 			}
 			System.out.println(" -> Time used to scrape AMZ page: "+(endTime-startTime)*0.000000001);
 			totalItemsScrapedWithInfo = Amazon.getTotalItemsScrapedWithInfo();
@@ -220,7 +220,6 @@ public class Scraper {
 	}
 	
 	public void startAmazonBestSellersTopProducts(String url, String category) throws Exception {
-		System.out.println(category+" - "+url);
 		Response response = Jsoup.connect(url)
 				.ignoreContentType(true)
 				.userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36")  
@@ -229,13 +228,15 @@ public class Scraper {
 				.followRedirects(true)
 				.execute();
 		Document amazonBestSellersPage = response.parse();
-//		Document amazonBestSellersPage = Jsoup.connect(url).get();
+		int currentPage = Integer.parseInt(amazonBestSellersPage.select("ol.zg_pagination").select("li.zg_selected").select("a").attr("page"));
+		System.out.println(category+" | PAGE "+currentPage+" | "+url);
+
 		String urlPrefix = "https://www.amazon.com";
 		String itemURL;
 		if(Settings.AMAZON_MARKETPLACE.equals("CA")) {
 			urlPrefix = "https://www.amazon.ca";
 		}
-		int count = 1;
+		int count = 1 + (currentPage-1)*20;
 		Elements elements = amazonBestSellersPage.select("div#zg_centerListWrapper");
 		for(Element element : elements.select("div.zg_itemImmersion")) {
 			itemURL = urlPrefix + element.select("a.a-link-normal").attr("href");
@@ -247,6 +248,9 @@ public class Scraper {
 			util.delayBetween(1000,2000);
 			count++;
 			if(count > Settings.TEST_MAX_ITEM_TO_SCRAPE) break;
+		}
+		if(currentPage < Settings.PAGES_TO_SCRAPE_IN_BEST_SELLERS_CATEGORIES) {
+			startAmazonBestSellersTopProducts(amazonBestSellersPage.select("ol.zg_pagination").select("li#zg_page"+(currentPage+1)).select("a").attr("href"), category);
 		}
 	}
 	

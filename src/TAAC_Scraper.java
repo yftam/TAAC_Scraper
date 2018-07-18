@@ -125,8 +125,8 @@ public class TAAC_Scraper {
 //			scraper.startAmazonBestSellersList("https://www.amazon.com/Best-Sellers/zgbs/amazon-devices/ref=zg_bs_nav_0", 2);
 			scraper.closeFile();
 		} else if (Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_SCRAPE_TOP_PRODUCTS_IN_BEST_SELLERS_CATEGORIES) {	//using links from scrape_mode 3 to scrape top products in Amazon Best Sellers sub-categories
-			//*********** COMMAND LINE RUN -> java -jar TAAC_Scraper.jar 4 UA 6 1 ***********
-			//*********** 4 means scrape mode 4, US means marketplace eg)US/CA, 6 means total number of instances, 1 means the instance number
+			//*********** COMMAND LINE RUN -> java -jar TAAC_Scraper.jar 4 UA 1 6 5 ***********
+			//*********** 4 means scrape mode 4, US means marketplace eg)US/CA, 1 means the instance number, 6 means total number of instances, 5 means pages of best sellers to scrape
 //			File file = new File(scrape_dest+"/amazon_best_sellers/categories_to_scrape_"+Settings.AMAZON_MARKETPLACE+".csv");
 			String ts1 = new SimpleDateFormat("yyyy/MM/dd HH").format(new Date()).replace(" ", "-").replaceAll("\\/|\\:", "");
 			String outputFolderName = ts1+"-"+Settings.AMAZON_MARKETPLACE+"-level-"+Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL;
@@ -136,10 +136,13 @@ public class TAAC_Scraper {
 			
 			input = new Scanner(System.in);
 			int instance = 999;
+			if(args.length > 4) {
+				Settings.PAGES_TO_SCRAPE_IN_BEST_SELLERS_CATEGORIES = Integer.parseInt(args[4]);
+			}
 			if(args.length > 3) {	//args with (MODE,MARKETPLACE,THREAD_NUM,INSTANCE)
-				Settings.THREAD_NUM = Integer.parseInt(args[2]);
-				instance = Integer.parseInt(args[3]);
-			} else if(args.length > 2) {	//args with (MODE,MARKETPLACE,INSTANCE)
+				Settings.THREAD_NUM = Integer.parseInt(args[3]);
+			}
+			if(args.length > 2) {	//args with (MODE,MARKETPLACE,INSTANCE)
 				instance = Integer.parseInt(args[2]);
 			} else {
 				while(instance > Settings.THREAD_NUM) {
@@ -152,7 +155,7 @@ public class TAAC_Scraper {
 				}
 			}
 			
-			System.out.println("Instance "+instance+" of "+Settings.THREAD_NUM+" initiated");
+			System.out.println(Settings.AMAZON_MARKETPLACE+" - Instance "+instance+" of "+Settings.THREAD_NUM+" initiated");
 			instance = instance == Settings.THREAD_NUM ? 0 : instance;
 //			Thread.sleep(Settings.THREAD_NUM * 500);
 
@@ -199,7 +202,7 @@ public class TAAC_Scraper {
 			DateFormat df = new SimpleDateFormat("HH:mm");
 			String ts2 = df.format(new Date()).replace(" ", "-").replaceAll("\\/|\\:", "");
 			
-			String url = "https://www.amazon.ca/Best-Sellers-Grocery/zgbs/grocery/ref=zg_bs_nav_0/142-7901254-1425667";
+			String url = "https://www.amazon.com/Best-Sellers-Automotive/zgbs/automotive/ref=zg_bs_nav_0/135-4139201-6915306";
 
 			scraper.createFile(outputDir+"/"+Settings.AMAZON_MARKETPLACE+"-"+ts2+".csv", outputDir+"/"+"error.txt");
 			scraper.filePrintln("Link,Marketplace,ASIN,TimeScraped,Product,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,"
