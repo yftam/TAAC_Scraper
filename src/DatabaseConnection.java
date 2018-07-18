@@ -17,7 +17,9 @@ public class DatabaseConnection {
 			String path = LocalOutputDest.DB_DEST;
 			String url = "jdbc:ucanaccess://" + path;
 
+			System.out.println("CONNECTION TO DATABASE STARTING ... ");
 			con = DriverManager.getConnection(url);
+	        System.out.println("CONNECTION TO DATABASE SUCESSFUL ... ");
 		} catch (Exception e) {
 			System.err.println(e);
 		}
@@ -28,6 +30,14 @@ public class DatabaseConnection {
 		ResultSet rs = st.executeQuery(query);
 
 		return rs;
+	}
+	
+	public void setAllProductInactive(String marketplace) throws SQLException {
+		String query =  "UPDATE AmazonProduct SET [Active]=? WHERE Marketplace = '"+ marketplace+"'";
+		PreparedStatement ps = con.prepareStatement(query);
+		int parameterIndex = 1;
+		ps.setBoolean(parameterIndex, false);
+		ps.executeUpdate();
 	}
 	
 	public void upsertAmazonProduct(Amazon amz) throws SQLException {
@@ -76,7 +86,7 @@ public class DatabaseConnection {
 		ps.setString(parameterIndex, amz.getBestSellerCategory().replace("'", "''")); parameterIndex++;
 		ps.setString(parameterIndex, amz.getAmazonChoiceCategory().replace("'", "''")); parameterIndex++;
 		ps.setString(parameterIndex, amz.getAddon()); parameterIndex++;
-		ps.setString(parameterIndex, util.printRank(amz.getRankList()).replace("'", "''")); parameterIndex++;
+		ps.setString(parameterIndex, amz.getRank().replace("'", "''")); parameterIndex++;
 		ps.executeUpdate();
 	}
 	
@@ -98,7 +108,7 @@ public class DatabaseConnection {
 		System.out.println("PRODUCT EXIST... UPDATE "+amz.getAsin());
 		insertAmazonProductHistory(amz);
 		String query =  "UPDATE AmazonProduct SET "
-				+ 			"[DateUpdated]=Now(),[Rating]=?,[Reviews]=?,[AnsweredQ]=?,[PriceNow]=?,[Save]=?,[Save%]=?,[Coupon]=?,[Promo]=?,"
+				+ 			"[Active]=true,[DateUpdated]=Now(),[Rating]=?,[Reviews]=?,[AnsweredQ]=?,[PriceNow]=?,[Save]=?,[Save%]=?,[Coupon]=?,[Promo]=?,"
 				+ 			"[Stock]=?,[Merchant]=?,[PrimeExclusive]=?,[BestSeller]=?,[AmzChoice]=?,[IsAddOn]=?,[Rank]=? "
 				+ 		"WHERE Marketplace = '"+ amz.getMarketplace() + "' AND ASIN = '"+ amz.getAsin() + "'";
 		PreparedStatement ps = con.prepareStatement(query);
@@ -117,7 +127,7 @@ public class DatabaseConnection {
 		ps.setString(parameterIndex, amz.getBestSellerCategory().replace("'", "''")); parameterIndex++;
 		ps.setString(parameterIndex, amz.getAmazonChoiceCategory().replace("'", "''")); parameterIndex++;
 		ps.setString(parameterIndex, amz.getAddon()); parameterIndex++;
-		ps.setString(parameterIndex, util.printRank(amz.getRankList()).replace("'", "''")); parameterIndex++;
+		ps.setString(parameterIndex, amz.getRank().replace("'", "''")); parameterIndex++;
 		ps.executeUpdate();
 	}
 	

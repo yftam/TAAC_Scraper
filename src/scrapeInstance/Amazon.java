@@ -32,7 +32,7 @@ public class Amazon extends ScrapeUtil {
 	private String primeExclusive = "", addon = "";
 	private String bestSellerCategory = "", amazonChoiceCategory = "";
 	private String rank = "";
-	private String[] rankList;
+	private String[] rankList = {};
 	
 	private boolean camelScraped = false;
 	private Camel camel = new Camel();
@@ -41,6 +41,10 @@ public class Amazon extends ScrapeUtil {
 	
 	private static int totalItemsScraped;
 	private static int totalItemsScrapedWithInfo;
+	
+	public Amazon() {
+		
+	}
 	
 	public Amazon(String marketplace, Camel camel) {
 		this(marketplace, camel.getAsin());
@@ -52,7 +56,7 @@ public class Amazon extends ScrapeUtil {
 		this.marketplace = marketplace;
 		if(urlOrAsin.contains("amazon") || urlOrAsin.contains("/")) {	//passing in url
 			url = urlOrAsin;
-			asin = findMatch(urlOrAsin, "(\\/([0-9]{10}|B([A-Z]|[0-9]){9}|[0-9]{9}[A-Z]{1})\\/)|Asin\\=B([A-Z]|[0-9]){9}").replace("Asin=", "").replace("/", "");
+			asin = findMatch(urlOrAsin, "(\\/([0-9]{8,10}|B([A-Z]|[0-9]){9}|[0-9]{9}[A-Z]{1})\\/)|Asin\\=B([A-Z]|[0-9]){9}").replace("Asin=", "").replace("/", "");
 		} else {	//passing in ASIN
 			asin = urlOrAsin;
 			if(marketplace == "US") {
@@ -86,7 +90,13 @@ public class Amazon extends ScrapeUtil {
 		} catch (Exception e) { reviews = 0; }
 		try { answeredQ = Integer.parseInt(amazonPage.select("a#askATFLink > span").text().replaceAll("[^\\d]", ""));
 		} catch (Exception e) { answeredQ = 0; }
-		String priceStr = amazonPage.select("span#priceblock_ourprice, span#priceblock_dealprice, span#priceblock_saleprice").text().replaceAll("\\D*\\$|\\,", "");
+		String priceStr = amazonPage.select("span#priceblock_dealprice").text().replaceAll("\\D*\\$|\\,", "");
+		if(priceStr.equals("")) {
+			priceStr = amazonPage.select("span#priceblock_saleprice").text().replaceAll("\\D*\\$|\\,", "");
+		}
+		if(priceStr.equals("")) {
+			priceStr = amazonPage.select("span#priceblock_ourprice").text().replaceAll("\\D*\\$|\\,", "");
+		}
 		if(priceStr.equals("")) {	//most likely in the case of scraping Books
 			priceStr = amazonPage.select("span[class=\"a-size-medium a-color-price offer-price a-text-normal\"], span[class=\"a-size-medium a-color-price header-price\"]").text().replaceAll("\\D*\\$|\\,", "");
 		}
@@ -352,7 +362,11 @@ public class Amazon extends ScrapeUtil {
 	}
 
 	public String getRank() {
-		return rank;
+		if(rankList.length > 0) {
+			return printRank(rankList);
+		} else {
+			return rank;
+		}
 	}
 
 	public void setRank(String rank) {
