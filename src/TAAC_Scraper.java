@@ -27,6 +27,8 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.phantomjs.*;
 import org.openqa.selenium.remote.DesiredCapabilities;
 
+import scrapeInstance.ScrapeUtil;
+
 public class TAAC_Scraper {
 	
 	private static Map<String, String> connectCamel() {
@@ -60,6 +62,7 @@ public class TAAC_Scraper {
 		long startTime, endTime;
 		startTime = System.nanoTime();
 		Scanner input = null;
+		ScrapeUtil util = new ScrapeUtil();
 		
 		if(args.length >= 1) {	//scrape mode entered in run argument
 			Settings.SCRAPE_MODE = Integer.parseInt(args[0]);
@@ -92,7 +95,7 @@ public class TAAC_Scraper {
 			try {
 				for (int i = 0; i < camelAmzCategory.length; i++) {
 					scraper.createFile(scrape_dest+"/"+ts+"/"+ts+"-"+camelAmzCategory[i]+".csv", scrape_dest+"/"+ts+"/"+"error.txt");
-					scraper.filePrintln("Link,Marketplace,ASIN,TimeScraped,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,LowestPrice,IsLowest,$Within,AveragePrice,%Below,$Below,Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank");
+					scraper.filePrintln("Link,Marketplace,ASIN,TimeScraped,Product,PostCriteria,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,LowestPrice,IsLowest,$Within,AveragePrice,%Below,$Below,Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank,Existing");
 					scraper.startCamelPopularProductsURL(camelPopularProductsURL, "?deal=1&bn="+camelAmzCategory[i], camelLoginCookies);
 					scraper.closeFile();
 				}
@@ -109,7 +112,7 @@ public class TAAC_Scraper {
 "B0771KHNYQ","B073WX1ZSK","B00AE229DA","B00LM8XW7M","B0771SK6FY","B076MW7X8W","B00HY6CTBQ","B00HOLMLIW","B00DTGBKBA"};
 			scraper.setLoginCookies(camelLoginCookies);
 			scraper.createFile(scrape_dest+"/"+ts+"/"+ts+"-manualTest.csv", scrape_dest+"/"+ts+"/"+"error.txt");
-			scraper.filePrintln("Link,Marketplace,ASIN,TimeScraped,Product,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,LowestPrice,IsLowest,$Within,AveragePrice,%Below,$Below,Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank");
+			scraper.filePrintln("Link,Marketplace,ASIN,TimeScraped,Product,PostCriteria,Prime,AmazonSt,3rdPtySt,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,LowestPrice,IsLowest,$Within,AveragePrice,%Below,$Below,Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank,Existing");
 			for (int i = 0; i < asin.length; i++) {
 				scraper.startCamelProductPage("https://camelcamelcamel.com/product/"+asin[i]);
 			}
@@ -136,14 +139,13 @@ public class TAAC_Scraper {
 			
 			input = new Scanner(System.in);
 			int instance = 999;
-			if(args.length > 4) {
-				Settings.PAGES_TO_SCRAPE_IN_BEST_SELLERS_CATEGORIES = Integer.parseInt(args[4]);
-			}
-			if(args.length > 3) {	//args with (MODE,MARKETPLACE,THREAD_NUM,INSTANCE)
-				Settings.THREAD_NUM = Integer.parseInt(args[3]);
-			}
-			if(args.length > 2) {	//args with (MODE,MARKETPLACE,INSTANCE)
-				instance = Integer.parseInt(args[2]);
+			//args with (MODE,MARKETPLACE,INSTANCE,THREAD_NUM,PAGES_TO_SCRAPE,MAX_ITEM_TO_SCRAPE,DB_SET_PRODUCT_INACTIVE,AMAZON_BEST_SELLERS_CATEGORY_LEVEL)
+			if(args.length > 7) { Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL = args[7]; }
+			if(args.length > 6) { Settings.DB_SET_PRODUCT_INACTIVE = Boolean.valueOf(args[6]); }
+			if(args.length > 5) { Settings.TEST_MAX_ITEM_TO_SCRAPE = Integer.parseInt(args[5]); }
+			if(args.length > 4) { Settings.PAGES_TO_SCRAPE_IN_BEST_SELLERS_CATEGORIES = Integer.parseInt(args[4]); }
+			if(args.length > 3) { Settings.THREAD_NUM = Integer.parseInt(args[3]); }
+			if(args.length > 2) { instance = Integer.parseInt(args[2]);
 			} else {
 				while(instance > Settings.THREAD_NUM) {
 					System.out.println("Enter the instance number (1 - "+Settings.THREAD_NUM+"): ");
@@ -159,9 +161,9 @@ public class TAAC_Scraper {
 			instance = instance == Settings.THREAD_NUM ? 0 : instance;
 //			Thread.sleep(Settings.THREAD_NUM * 500);
 
-			ResultSet rs = dbConn.querySelect(
-					"SELECT [CategoryName],[CategoryUrl] FROM AmazonBestSellersCategories "
-					+ "WHERE Marketplace = '"+Settings.AMAZON_MARKETPLACE+"' AND CategoryLevel = "+Settings.AMAZON_BEST_SELLERS_CATEGORY_LEVEL+" AND Enabled = true");
+			ResultSet rs = dbConn.selectAmazonBestSellersCategories();
+//			dbConn.con.close();
+//			dbConn.backupCon.close();
 			int lineCount = 1;
 			while(rs.next()) {
 				if(lineCount % Settings.THREAD_NUM == instance && lineCount >= Settings.SCRAPE_TOP_PRODUCTS_IN_BEST_SELLERS_CATEGORIES_START_LINE) {
@@ -169,8 +171,8 @@ public class TAAC_Scraper {
 					String category = rs.getString("CategoryName");
 					String ts2 = df2.format(new Date()).replace(" ", "-").replaceAll("\\/|\\:", "");
 					scraper.createFile(outputDir+"/"+Settings.AMAZON_MARKETPLACE+"-"/*+ts2+"-"*/+category+".csv", outputDir+"/"+"error.txt");
-					scraper.filePrintln("Link,Marketplace,ASIN,TimeScraped,Product,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,"
-							+ "Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank");
+					scraper.filePrintln("Link,Marketplace,ASIN,TimeScraped,Product,PostCriteria,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,"
+							+ "Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank,Existing");
 					String instanceTrackFileName = outputDir+"/TRACK-"+Settings.AMAZON_MARKETPLACE+"-"+category+".track";
 					File instanceTrackFile = new File(instanceTrackFileName);
 					instanceTrackFile.createNewFile();
@@ -202,12 +204,12 @@ public class TAAC_Scraper {
 			DateFormat df = new SimpleDateFormat("HH:mm");
 			String ts2 = df.format(new Date()).replace(" ", "-").replaceAll("\\/|\\:", "");
 			
-			String url = "https://www.amazon.com/Best-Sellers-Automotive/zgbs/automotive/ref=zg_bs_nav_0/135-4139201-6915306";
+			String url = "https://www.amazon.ca/Best-Sellers-Tools-Home-Improvement/zgbs/hi";
 
 			scraper.createFile(outputDir+"/"+Settings.AMAZON_MARKETPLACE+"-"+ts2+".csv", outputDir+"/"+"error.txt");
-			scraper.filePrintln("Link,Marketplace,ASIN,TimeScraped,Product,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,"
+			scraper.filePrintln("Link,Marketplace,ASIN,TimeScraped,Product,PostCriteria,Rating,Reviews,AnsweredQ,PriceNow,Save,Save%,Coupon,Promo,"
 //							+ "LowestPrice,IsLowest,$Within,AveragePrice,%Below,$Below,"
-					+ "Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank");
+					+ "Stock,Merchant,PrimeExclusive,BestSeller,AmzChoice,IsAddOn,Rank,Existing");
 			scraper.startAmazonBestSellersTopProducts(url, "Manual-Mode");
 			scraper.closeFile();
 			System.out.println("=================================================================================");
@@ -215,7 +217,10 @@ public class TAAC_Scraper {
 			System.out.println("=================================================================================");
 			System.out.println();
 		} else if (Settings.SCRAPE_MODE == Settings.SCRAPE_MODE_COMBINE_TOP_PRODUCTS_RESULTS) {	//manually combining all Amazon Best Sellers sub-category scraped products into a single csv file
-			String dirToCombine = "20180717-19-US-level-1";
+			String dirToCombine = "20180730-10-CA-level-1";
+			if(args.length > 2) { 
+				dirToCombine = args[2];
+			}
 			String resultsDir = scrape_dest+"/amazon_best_sellers/"+dirToCombine;
 
 			scraper.startCombiningAmazonBestSellersTopProductResults(resultsDir, dirToCombine);
@@ -244,7 +249,8 @@ public class TAAC_Scraper {
 			System.out.println(driver.getPageSource());
 		}
 		
-//		dbConn.con.close();
+		if(!dbConn.con.isClosed()) dbConn.con.close();
+//		if(!dbConn.backupCon.isClosed()) dbConn.backupCon.close();
 		endTime = System.nanoTime();
 		System.out.println("========= "+new Date().toString()+" "+(endTime-startTime)*0.000000001+" =========");
 		System.out.println("========= FINISHED =========");
